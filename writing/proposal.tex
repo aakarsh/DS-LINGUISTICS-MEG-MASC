@@ -1,0 +1,118 @@
+\documentclass{tufte-handout}
+\usepackage{graphicx} 
+
+\title{Winter-2024 DSL: Identifying Elements of the\\ Linguistic Processing Pipeline in MEG-MASC dataset- (Ungraded)}
+
+\author{Aakarsh Nair}
+\date{March 2025}
+\begin{document}
+\maketitle
+
+\iffalse
+A complete project proposal should contain the following elements: ▷ concise and descriptive title, information about contributors ▷ an introduction laying out the research question, providing the essential context and background information about the topic ▷ a clear statement of the objective: research question to be answered, result to replicate ▷ preliminary literature review showing that you have an idea of what is out there in terms of both methods and datasets, and where to look for ideas and examples in case you get stuck ▷ considerations of scope: which aspects will be included in and excluded from the study, and what are the reasons for the decisions? (most commonly: data availability, time constraints) ▷ proposed methodology: what are your plans for data acquisition, and which techniques are you planning to apply to your data in order to answer the research question? ▷ preliminary project plan laying out the work each project contributor is planning to do in which week, and how this means the work will be completed as the deadline approaches ▷ a statement of the expected outcomes: what will we able to learn from the project results? What could we conclude from a failed replication or lack of evidence for your hypothesis?
+
+\fi
+
+\section{Introduction}
+%% An introduction laying out the research question,
+%% providing the essential context and background information about the topic
+%% \section{Explain the context of the problem.}
+
+In this study we aim to replicate parts of the study \citep{Gwilliams2024.04.19.590280} \emph{Hierarchical Dynamic Coding Coordinates Speech Comprehension in the Brain} based on the MEG-MASC \citep{gwilliams2022megmaschighqualitymagnetoencephalographydataset} (\emph{Manually Annotated Sub-Corpus of Magnetoencephalography Recording}) of participants listening to natural language stories with their brain activity being recorded. The goal of the study is to ground proposed linguistic theories on biological computational implementations. Specifically how the hierarchy of linguistic features are \emph{maintained} and \emph{modified/updated} over the course of speech. Recording consists of 27 English speakers who listed to 2 hours long narratives aimed to provide dataset suitable for detailed decoding/encoding analysis. 
+
+
+\section{Objective}
+
+The study aims to answer the following question:
+
+\begin{enumerate}
+    \item Can features of linguistic processing hierarchy be decoded from MEG singals?
+    \item What are the onsets and duarations during which these features remain decodable ? 
+    \item How does the underlying representation evolve over time ?
+\end{enumerate}
+
+%% ▷ a clear statement of the objective: research question to be answered, result to replicate
+%% ▷ preliminary literature review showing that you have an idea of what is out there in terms of
+%% both methods and datasets, and where to look for ideas and examples in case you get stuck
+
+\section{Scope}
+
+\begin{enumerate}
+    \item Scope will start with decoding phonetic features and work up to higher level features as they become available.
+    \item Scope will have to be adjusted during the implementation phase based on implementation difficulty, adjustments might include fewer features, for decoding, or different features from ones mentioned in the paper or simpler decoding algorithms.
+\end{enumerate}
+
+%% \section{If the problem were solved perfectly, what  would be the impact or significance?}
+%% \section{What are you trying to estimate or detect?}
+%% We are trying to estimate motion point spread function  or optical flow in a  sequence of images and attempting  to deconvolve it. 
+%% \section{What methods do you plan that you have learned during this class?}
+%% The Richardsen-Lucy algorithm is based on maximum  likelihood estimation. 
+%%\section{Describe the available data}
+%% Star images taken using a embedded camera system at  varying levels of exposure. We can synthetically apply  motion blur  to images for gold standard test.
+
+\section{Methodology}
+
+%% Proposed Methodology: what are your plans for data acquisition, and which techniques are you planning to apply to your data in order to answer the research question? 
+
+\begin{enumerate}
+    \item Understand and investigate the Back-to-Back Regression algorithm \citep{King2020.03.05.976936} to correlate MEG signal time-points with linguistic feature onsets at various levels of procesing hierarchies. 
+    \item Understand and investigate the temporal generalization algorithm \citep{KING2014203}
+    \begin{enumerate}
+        \item \emph{Phoneme Level Features}: Voicing, Manner of Articulation, Place of Articulation 
+        \item \emph{Sub-Lexical Features}:
+        Number of Phonemes, Syllables, Morphemes in a word, Phonological Neighborhood Density.
+        \item  \emph{Word Class}:
+        Noun, Pronoun, Determiner, WH-Word etc
+        \item \emph{Synctactic Operation/State}: 
+        \item \emph{Semantic Vector}: GloVe\cite{pennington-etal-2014-glove} or other embeddings for words.
+        
+    \end{enumerate}
+    
+\end{enumerate}
+
+
+\subsection{Data Set}
+
+\begin{enumerate}
+    \item Gather download MEG-MASC \cite{gwilliams2022megmaschighqualitymagnetoencephalographydataset} dataset
+    \item Apply Spacy\cite{Honnibal_spaCy_Industrial} to extract features from the stories datasets and different levels of the linguistic heirarchy.
+\end{enumerate}
+
+\section{Project Plan}
+%%▷ Preliminary Project 
+% plan laying out the work each project contributor is planning to do in which week ?
+% how this means the work will be completed as the deadline approaches ? 
+
+\begin{enumerate}
+    \item Download and parse the MEG-MASC dataset, repository setup and possible access on Baden-Württemberg Cluster. \emph{(3-4 days)}
+    
+    \item Identify phonological feature Matching by considering the code here. \cite{gwilliams2020neural} \emph{(3-4 days)}
+     
+    \item Annotate the story with lexical/semantic feature positions if not already present using Spacy and Penn Tree bank.  \emph{(3-4 days)}
+
+    \item Implementation and use of Back-to-Back Regression and Temporal Generalization Algorithms. \emph{(5-10 days)} 
+
+    \item Plotting and Result Generation and Final Report Preparation. \emph{(2 days)}
+    
+\end{enumerate}
+
+\section{Expected Outcomes}
+%% ▷ A statement of the expected outcomes: 
+% What will we able to learn from the project results? 
+% What could we conclude from a failed replication or 
+% lack of evidence for your hypothesis? 
+
+\begin{enumerate}
+    \item Success or Failure in decoding Linguistic Features of various linguistics levels.
+    \item Identification of how well the linguistic level of a feature correspond hold times. 
+\end{enumerate}
+
+%% \section{}
+%% \section{German Version}
+%%\usepackage{titling} 
+
+\bibliography{refs}
+\bibliographystyle{plainnat}
+
+%%\printbibliography{}
+\end{document}

@@ -49,7 +49,13 @@ def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
 
 def create_epochs(data_tuple: tuple) -> mne.Epochs:
     raw, meta = data_tuple
-    events = np.c_[meta.onset * raw.info["sfreq"], np.ones((len(meta), 2))].astype(int)
+    phoneme_meta = meta.query('kind=="phoneme"').copy()
+    
+    events = np.c_[
+        phoneme_meta.onset * raw.info["sfreq"], 
+        np.ones((len(phoneme_meta), 2))
+    ].astype(int)
+    
     return mne.Epochs(
         raw, events, tmin=-0.200, tmax=0.6, decim=10,
         baseline=(-0.2, 0.0), metadata=meta.query('kind=="phoneme"'),

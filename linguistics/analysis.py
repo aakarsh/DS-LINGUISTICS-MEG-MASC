@@ -8,6 +8,9 @@ from sklearn.model_selection import KFold
 from sklearn.pipeline import make_pipeline
 import toolz as Z 
 from tqdm import trange
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 from linguistics.env import Config
 from linguistics.reader.data import add_voiced_feature, add_word_frequency_feature, clean_epochs, create_epochs, parse_annotations
@@ -79,21 +82,36 @@ def analyze_subject(subject_id: str, config: Config) -> pd.DataFrame:
     
     all_results = pd.concat([results_voiced, results_wordfreq], ignore_index=True)
     
-    # Create figures
-    # figs = {
-        #"voiced": plot_decoding(results_voiced, f"Voicing Decoding - {subject_id}"),
-        #"wordfreq": plot_decoding(results_wordfreq, f"Word Freq Decoding - {subject_id}")
-    #}
-    figs = {} 
-    return all_results, figs
+    return all_results
 
 
 def analyze_all_subjects(config: Config) -> pd.DataFrame:
     all_results = []
     for subject_id in config.subjects:
-        results, figs = analyze_subject(subject_id, config)
+        results = analyze_subject(subject_id, config)
         all_results.append(results)
         # for key, fig in figs.items():
         #     fig.savefig(config.output_dir / f"{subject_id}_{key}_decoding.png")
         #     plt.close(fig)
     return pd.concat(all_results, ignore_index=True)
+
+def generate_result_figures(config: Config, all_results: pd.DataFrame):
+    sns.set_theme(style="whitegrid")
+    for subject_id in config.subjects:
+        for key in ["voiced", "wordfreq"]:
+            subset = all_results[
+                (all_results["subject"] == subject_id) & 
+                (all_results["contrast"] == key)
+            ]
+            if subset.empty:
+                continue
+            plt.figure(figsize=(10, 5))
+            plt.plot(subset["time"], subset["score"], label=f"{key} decoding")
+            plt.axhline(0, color="k", linestyle="--", label="Chance level")
+            plt.title(f"{key.capitalize()} Decoding - {subject_id}")
+            plt.xlabel("Time (s)")
+            plt.ylabel("Decoding Score (AUC)")
+            plt.legend()
+            plt.tight_layout()
+            plt.savefig(config.output_dir / f"{subject_id}_{key}_decoding.png")
+            plt.close()
