@@ -1,0 +1,3 @@
+[submodule "reference-code/meg-masc"]
+	path = reference-code/meg-masc
+	url = https://github.com/kingjr/meg-masc.git
