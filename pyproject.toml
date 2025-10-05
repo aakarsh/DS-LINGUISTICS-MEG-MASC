@@ -18,6 +18,7 @@ dependencies = [
     "scipy>=1.16.2",
     "seaborn>=0.13.2",
     "spacy>=3.8.7",
+    "toolz>=1.0.0",
     "tqdm>=4.67.1",
     "wordfreq>=3.1.1",
 ]
