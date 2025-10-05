@@ -42,14 +42,13 @@ def process_bids_file(bids_path, phonetic_information: pd.DataFrame) -> mne.Epoc
         raw = mne_bids.read_raw_bids(bids_path)
         raw.pick_types(meg=True).load_data().filter(0.5, 30.0, n_jobs=1)
         
-        epochs = Z.pipe(raw,
-            parse_annotations,
-            (add_voiced_feature, phonetic_information),
-            add_word_frequency_feature,
-            lambda df: (raw, df), 
-            create_epochs,
-            clean_epochs
-        )
+        meta = parse_annotations(raw)
+        meta = add_voiced_feature(meta, phonetic_information)
+        meta = add_word_frequency_feature(meta)
+        
+        epochs = create_epochs((raw, meta))
+        epochs = clean_epochs(epochs)
+        
         return epochs
     except FileNotFoundError:
         return None

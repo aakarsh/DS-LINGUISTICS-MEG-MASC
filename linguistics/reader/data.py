@@ -5,12 +5,26 @@ import mne
 from pathlib import Path
 
 from wordfreq import zipf_frequency
+import logging
+
+
+logger = logging.getLogger("linguistics.reader.data")
+logger.setLevel(logging.DEBUG)
 
 def parse_annotations(raw: mne.io.Raw) -> pd.DataFrame:
-    meta_list = [eval(annot.pop("description")) for annot in raw.annotations]
+    meta_list = []
+    for annot in raw.annotations:
+        # Parse the description and merge with annotation properties
+        d = eval(annot.pop("description"))
+        for k, v in annot.items():
+            if k not in d:
+                d[k] = v
+        meta_list.append(d)
+    logger.info(f"Found {len(meta_list)} annotations")
     return pd.DataFrame(meta_list)
 
 def add_voiced_feature(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.DataFrame:
+    logger.info("Adding voiced feature")
     df = df.copy()
     phonemes = df.query('kind=="phoneme"')
     for ph, d in phonemes.groupby("phoneme"):
@@ -18,6 +32,7 @@ def add_voiced_feature(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.
         match = phone_information.query("phoneme==@ph_clean")
         if len(match) == 1:
             df.loc[d.index, "voiced"] = match.iloc[0].phonation == "v"
+    logger.info(f"Voiced feature added with {df['voiced'].sum()} voiced phonemes")
     return df
 
 def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
@@ -29,6 +44,7 @@ def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
         df.loc[word_onset_indices, "is_word_onset"] = True
         wfreq = lambda x: zipf_frequency(x, "en")
         df.loc[word_onset_indices, "wordfreq"] = words.word.apply(wfreq).values
+    logger.info(f"Word frequency feature added with {df['is_word_onset'].sum()} word onsets")
     return df
 
 def create_epochs(data_tuple: tuple) -> mne.Epochs:
