@@ -1,5 +1,3 @@
-
-from linguistics.reader.data import foo
 from linguistics.env import load_config
 
 def test_config_loadable():

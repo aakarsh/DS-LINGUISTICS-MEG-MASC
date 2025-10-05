@@ -31,14 +31,14 @@ class Config:
     bids_root: Path
     phonetic_information: pd.DataFrame
     subjects: list
-
-def load_config(bids_root = data_directory(), phoneme_path = phoneme_inventory()) -> Config:
-    """Handles all file I/O and user input to create a config object."""
-    bids_root = Path(bids_root)
-    ph_info_path = Path(phoneme_path)
-    phonetic_information = pd.read_csv(ph_info_path)
     
-    subjects_df = pd.read_csv(bids_root / "participants.tsv", sep="\t")
-    subjects = subjects_df.participant_id.apply(lambda x: x.split("-")[1]).tolist()
+    @staticmethod
+    def load_config(bids_root = data_directory(), phoneme_path = phoneme_inventory()) -> "Config":
+        bids_root = Path(bids_root)
+        ph_info_path = Path(phoneme_path)
+        phonetic_information = pd.read_csv(ph_info_path)
+        
+        subjects_df = pd.read_csv(bids_root / "participants.tsv", sep="\t")
+        subjects = subjects_df.participant_id.apply(lambda x: x.split("-")[1]).tolist()
 
-    return Config(bids_root=bids_root, phonetic_information=phonetic_information, subjects=subjects)
+        return Config(bids_root=bids_root, phonetic_information=phonetic_information, subjects=subjects)
