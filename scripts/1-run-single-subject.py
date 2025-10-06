@@ -1,4 +1,6 @@
 import argparse
+from pathlib import Path
+from linguistics import env
 from linguistics.analysis import analyze_all_subjects, analyze_subject
 from linguistics.env import Config
 
@@ -16,5 +18,7 @@ if __name__ == "__main__":
     config = Config.load_config()
     results = analyze_subject(args.subject_id, config, n_jobs=args.max_workers)
 
+    config.output_dir.mkdir(parents=True, exist_ok=True)
     output_file = config.output_dir / f"{args.subject_id}_decoding_results.csv"
+    
     results.to_csv(output_file, index=False)

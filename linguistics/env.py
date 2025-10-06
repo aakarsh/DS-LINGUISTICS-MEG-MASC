@@ -29,8 +29,10 @@ def phoneme_inventory():
 @dataclass
 class Config:
     bids_root: Path
+    output_dir: Path 
     phonetic_information: pd.DataFrame
     subjects: list
+    
     
     @staticmethod
     def load_config(bids_root = data_directory(), phoneme_path = phoneme_inventory()) -> "Config":
@@ -41,4 +43,4 @@ class Config:
         subjects_df = pd.read_csv(bids_root / "participants.tsv", sep="\t")
         subjects = subjects_df.participant_id.apply(lambda x: x.split("-")[1]).tolist()
 
-        return Config(bids_root=bids_root, phonetic_information=phonetic_information, subjects=subjects)
+        return Config(bids_root=bids_root, phonetic_information=phonetic_information, subjects=subjects, output_dir=Path(output_directory()))

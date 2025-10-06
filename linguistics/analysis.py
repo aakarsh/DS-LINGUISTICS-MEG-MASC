@@ -12,7 +12,7 @@ from tqdm import trange
 from linguistics.env import Config
 from linguistics.reader.data import add_voiced_feature, add_word_frequency_feature, clean_epochs, create_epochs, parse_annotations
 
-def run_decoding(epochs: mne.Epochs, feature: str) -> pd.DataFrame:
+def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int =-1) -> pd.DataFrame:
     X = epochs.get_data() * 1e13
     y = epochs.metadata[feature].values.astype(float)
     
@@ -27,7 +27,7 @@ def run_decoding(epochs: mne.Epochs, feature: str) -> pd.DataFrame:
 
     for t in trange(n_times, desc=f"Decoding {feature}"):
         preds[:, t] = cross_val_predict(
-            model, X[:, :, t], y, cv=cv, method="predict_proba"
+            model, X[:, :, t], y, cv=cv, method="predict_proba", n_jobs=n_jobs
         )[:, 1]
 
     X, Y = y[:, None], preds

@@ -31,4 +31,4 @@ source "${PROJECT_ROOT}/.env.slurm"
 
 echo "Starting Slurm job $SLURM_ARRAY_TASK_ID for subject: $CURRENT_SUBJECT"
 
-uv run python ${PROJECT_ROOT}/scripts/1-run-single-subject.py  --subject-id $CURRENT_SUBJECT --max-workers 64
+uv run python ${PROJECT_ROOT}/scripts/1-run-single-subject.py  --subject-id $CURRENT_SUBJECT --max-workers 128
