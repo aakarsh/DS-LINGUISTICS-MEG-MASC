@@ -16,7 +16,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     config = Config.load_config()
-    results = analyze_subject(args.subject_id, config, n_jobs=args.max_workers)
+    results, figs = analyze_subject(args.subject_id, config, n_jobs=args.max_workers)
 
     config.output_dir.mkdir(parents=True, exist_ok=True)
     output_file = config.output_dir / f"{args.subject_id}_decoding_results.csv"

@@ -1,3 +1,4 @@
+from typing import Tuple
 import mne
 import mne_bids
 import numpy as np
@@ -53,7 +54,7 @@ def process_bids_file(bids_path, phonetic_information: pd.DataFrame, n_jobs=-1) 
     except FileNotFoundError:
         return None
     
-def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> pd.DataFrame:
+def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.DataFrame, dict]: 
     print(f"\nProcessing subject: {subject_id}")
     all_epochs = []
     for session in range(2):
