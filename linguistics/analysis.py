@@ -8,14 +8,11 @@ from sklearn.model_selection import KFold
 from sklearn.pipeline import make_pipeline
 import toolz as Z 
 from tqdm import trange
-import matplotlib.pyplot as plt
-import seaborn as sns
-
 
 from linguistics.env import Config
 from linguistics.reader.data import add_voiced_feature, add_word_frequency_feature, clean_epochs, create_epochs, parse_annotations
 
-def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int = -1) -> pd.DataFrame:
+def run_decoding(epochs: mne.Epochs, feature: str) -> pd.DataFrame:
     X = epochs.get_data() * 1e13
     y = epochs.metadata[feature].values.astype(float)
     
@@ -30,7 +27,7 @@ def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int = -1) -> pd.DataF
 
     for t in trange(n_times, desc=f"Decoding {feature}"):
         preds[:, t] = cross_val_predict(
-            model, X[:, :, t], y, cv=cv, method="predict_proba", n_jobs=n_jobs
+            model, X[:, :, t], y, cv=cv, method="predict_proba"
         )[:, 1]
 
     X, Y = y[:, None], preds
@@ -40,15 +37,15 @@ def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int = -1) -> pd.DataF
     return pd.DataFrame(dict(score=scores, time=epochs.times))
 
 
-def process_bids_file(bids_path, phonetic_information: pd.DataFrame, n_jobs: int = -1) -> mne.Epochs | None:
+def process_bids_file(bids_path, phonetic_information: pd.DataFrame, n_jobs=-1) -> mne.Epochs | None:
     try:
         raw = mne_bids.read_raw_bids(bids_path)
         raw.pick_types(meg=True).load_data().filter(0.5, 30.0, n_jobs=n_jobs)
         
+            
         meta = parse_annotations(raw)
         meta = add_voiced_feature(meta, phonetic_information)
         meta = add_word_frequency_feature(meta)
-        
         epochs = create_epochs((raw, meta))
         epochs = clean_epochs(epochs)
         
@@ -56,7 +53,7 @@ def process_bids_file(bids_path, phonetic_information: pd.DataFrame, n_jobs: int
     except FileNotFoundError:
         return None
     
-def analyze_subject(subject_id: str, config: Config, n_jobs = -1) -> pd.DataFrame:
+def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> pd.DataFrame:
     print(f"\nProcessing subject: {subject_id}")
     all_epochs = []
     for session in range(2):
@@ -74,44 +71,29 @@ def analyze_subject(subject_id: str, config: Config, n_jobs = -1) -> pd.DataFram
     
     subject_epochs = mne.concatenate_epochs(all_epochs)
     
-    results_voiced = run_decoding(subject_epochs["not is_word_onset"], "voiced")
-    results_wordfreq = run_decoding(subject_epochs["is_word_onset"], "wordfreq")
+    results_voiced = run_decoding(subject_epochs["not is_word_onset"], "voiced", n_jobs=n_jobs)
+    results_wordfreq = run_decoding(subject_epochs["is_word_onset"], "wordfreq", n_jobs=n_jobs)
     
     results_voiced["contrast"], results_wordfreq["contrast"] = "voiced", "wordfreq"
     results_voiced["subject"], results_wordfreq["subject"] = subject_id, subject_id
     
     all_results = pd.concat([results_voiced, results_wordfreq], ignore_index=True)
     
-    return all_results
+    # Create figures
+    # figs = {
+        #"voiced": plot_decoding(results_voiced, f"Voicing Decoding - {subject_id}"),
+        #"wordfreq": plot_decoding(results_wordfreq, f"Word Freq Decoding - {subject_id}")
+    #}
+    figs = {} 
+    return all_results, figs
 
 
 def analyze_all_subjects(config: Config) -> pd.DataFrame:
     all_results = []
     for subject_id in config.subjects:
-        results = analyze_subject(subject_id, config)
+        results, figs = analyze_subject(subject_id, config)
         all_results.append(results)
         # for key, fig in figs.items():
         #     fig.savefig(config.output_dir / f"{subject_id}_{key}_decoding.png")
         #     plt.close(fig)
     return pd.concat(all_results, ignore_index=True)
-
-def generate_result_figures(config: Config, all_results: pd.DataFrame):
-    sns.set_theme(style="whitegrid")
-    for subject_id in config.subjects:
-        for key in ["voiced", "wordfreq"]:
-            subset = all_results[
-                (all_results["subject"] == subject_id) & 
-                (all_results["contrast"] == key)
-            ]
-            if subset.empty:
-                continue
-            plt.figure(figsize=(10, 5))
-            plt.plot(subset["time"], subset["score"], label=f"{key} decoding")
-            plt.axhline(0, color="k", linestyle="--", label="Chance level")
-            plt.title(f"{key.capitalize()} Decoding - {subject_id}")
-            plt.xlabel("Time (s)")
-            plt.ylabel("Decoding Score (AUC)")
-            plt.legend()
-            plt.tight_layout()
-            plt.savefig(config.output_dir / f"{subject_id}_{key}_decoding.png")
-            plt.close()
