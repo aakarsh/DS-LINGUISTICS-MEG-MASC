@@ -17,7 +17,6 @@ def plot_single_subject_decoding(results_df, subject_id=None, save_path=None):
     
     ax.axhline(0, color='black', linestyle='--', alpha=0.7, label='Chance Level')
     
-    # Formatting
     ax.set_xlabel('Time (s)', fontsize=12)
     ax.set_ylabel('Decoding Score', fontsize=12)
     ax.set_title(f'MEG Decoding Results - Subject {subject_id or ""}', fontsize=14, fontweight='bold')

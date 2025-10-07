@@ -80,13 +80,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
     
     all_results = pd.concat([results_voiced, results_wordfreq], ignore_index=True)
     
-    # Create figures
-    # figs = {
-        #"voiced": plot_decoding(results_voiced, f"Voicing Decoding - {subject_id}"),
-        #"wordfreq": plot_decoding(results_wordfreq, f"Word Freq Decoding - {subject_id}")
-    #}
-    figs = {} 
-    return all_results, figs
+    return all_results, None
 
 
 def analyze_all_subjects(config: Config) -> pd.DataFrame:
