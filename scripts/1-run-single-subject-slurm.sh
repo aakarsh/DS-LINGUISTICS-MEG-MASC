@@ -6,7 +6,7 @@
 #SBATCH --error=slurm_logs/%A_%a.err
 #SBATCH --partition=dev_cpu_il
 #SBATCH --time=00:29:00
-#SBATCH --array=0-3%1
+#SBATCH --array=4-7%1
 
 PROJECT_ROOT=/home/tu/tu_tu/tu_zxoxo45/TUE-SUMMER-2025/projects/DS-LINGUISTICS-MEG-MASC
 
