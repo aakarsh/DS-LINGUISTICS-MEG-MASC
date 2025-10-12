@@ -59,9 +59,6 @@ def add_part_of_speach_feature(df: pd.DataFrame) -> pd.DataFrame:
         full_text += str(row['word']) + " "
         char_to_original_index_map[start_char] = index
 
-    logger.info(f"Full text for POS tagging: '{full_text.strip()}'")
-    logger.info(f"Character to original index map: {char_to_original_index_map}")
-
     pos_map = Z.pipe(
         nlp(full_text.strip()),
         # Create a dictionary of {original_index: pos_tag}
@@ -71,38 +68,22 @@ def add_part_of_speach_feature(df: pd.DataFrame) -> pd.DataFrame:
             if token.idx in char_to_original_index_map
         }
     )
-    logger.info(f"POS map: {pos_map}")
     morph_map = Z.pipe(
         nlp(full_text.strip()),
         # Create a dictionary of {original_index: morph}
         lambda doc: {
-            char_to_original_index_map.get(token.idx): token.morph
+            char_to_original_index_map.get(token.idx): token.morph.to_dict()
             for token in doc
             if token.idx in char_to_original_index_map
         }
     )
-    logger.info(f"Morph map: {morph_map}")
-    full_document = " ".join(words.word.tolist())
-    doc = nlp(full_document)
-    pos_information = pd.DataFrame([(token.text, token.pos_) for token in doc], 
-                                   columns=["word", "part_of_speach"])
+    df_with_features = df.copy()
+    df_with_features['part_of_speach'] = df_with_features.index.map(pos_map)
+    morph_df = pd.DataFrame.from_dict(morph_map, orient='index')
+    df_with_features = pd.concat([df_with_features, morph_df], axis=1)
 
-    # pos_information = pos_information.drop_duplicates(subset=["word"])
-    # logger.debug(f"Processing word: {w.word}")
 
-    df["part_of_speach"] = np.nan
-    words = df.query('kind=="word"')
-    for w in words.itertuples():
-        doc = nlp(w.word)
-        if len(doc) == 1:
-            df.loc[w.Index, "part_of_speach"] = doc[0].pos_
-            logger.debug(f"Word '{w.word}' assigned POS: {doc[0].pos_}, MORPH: {doc[0].morph}")
-        else:
-            logger.warning(f"Word '{w.word}' was tokenized into multiple tokens: {[token.text for token in doc]}")
-            df.loc[w.Index, "part_of_speach"] = doc[0].pos_  # Assign the POS of the first token as a fallback
-            logger.debug(f"Word '{w.word}' assigned POS: {doc[0].pos_}")
-    logger.info(f"Part-of-speach feature added with {df['part_of_speach'].notna().sum()} words")
-    return df
+    return df_with_features
 
 def add_voiced_feature(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.DataFrame:
     logger.info("Adding voiced feature")
