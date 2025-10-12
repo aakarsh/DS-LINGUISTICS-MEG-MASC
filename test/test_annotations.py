@@ -1,5 +1,5 @@
 from linguistics.analysis import to_bids_path
-from linguistics.reader.data import add_part_of_speach_feature
+from linguistics.reader.data import add_linguistic_features
 from linguistics.reader.data import (
     parse_annotations
 )
@@ -42,18 +42,12 @@ def test_parse_annotations(annotations_df):
     
 def test_add_parts_of_speach_feature(annotations_df):
     logger.info("Testing part_of_speach feature assignment")
-    df_with_pos = add_part_of_speach_feature(annotations_df)
-    logger.info(f"DataFrame with POS feature has {len(df_with_pos)} rows")
-    logger.info(f"Columns: {df_with_pos.columns.tolist()}")
-    logger.info(f"Sample data:\n{df_with_pos.head(10)}")
+    df_with_pos = add_linguistic_features(annotations_df)
     for row in df_with_pos.itertuples():
         if row.kind == "word":
-            #logger.debug(f"Word: {row.wd}, POS: {row.part_of_speach}")
-            # assert pd.notnull(row.part_of_speach), f"Word '{row.wd}' is missing part_of_speach"
-            pass
+            assert pd.notnull(row.part_of_speach), f"Word '{row.wd}' is missing part_of_speach"
         else:
-            # assert pd.isnull(row.part_of_speach), f"Non-word '{row.wd}' should not have part_of_speach"
-            pass
+            assert pd.isnull(row.part_of_speach), f"Non-word '{row.word}' should not have part_of_speach"
 
     logger.info(df_with_pos[:1000])
 

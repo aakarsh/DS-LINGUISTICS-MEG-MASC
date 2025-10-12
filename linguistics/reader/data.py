@@ -45,10 +45,9 @@ class AnnotationsHelper:
     def add_part_of_speach_feature(df: pd.DataFrame) -> pd.DataFrame:
         return add_part_of_speach_feature(df)
 
-def add_part_of_speach_feature(df: pd.DataFrame) -> pd.DataFrame:
+def add_linguistic_features(df: pd.DataFrame) -> pd.DataFrame:
     logger.info("Adding part-of-speach feature")
     df = df.copy()
-    words = df.query('kind=="word"')
     words_df = df[df['kind'] == 'word'].dropna(subset=['word'])
 
     # Full text to character mapping
@@ -68,6 +67,7 @@ def add_part_of_speach_feature(df: pd.DataFrame) -> pd.DataFrame:
             if token.idx in char_to_original_index_map
         }
     )
+
     morph_map = Z.pipe(
         nlp(full_text.strip()),
         # Create a dictionary of {original_index: morph}
@@ -77,11 +77,11 @@ def add_part_of_speach_feature(df: pd.DataFrame) -> pd.DataFrame:
             if token.idx in char_to_original_index_map
         }
     )
+
     df_with_features = df.copy()
     df_with_features['part_of_speach'] = df_with_features.index.map(pos_map)
     morph_df = pd.DataFrame.from_dict(morph_map, orient='index')
     df_with_features = pd.concat([df_with_features, morph_df], axis=1)
-
 
     return df_with_features
 
