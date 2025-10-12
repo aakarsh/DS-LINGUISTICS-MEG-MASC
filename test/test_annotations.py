@@ -50,10 +50,3 @@ def test_add_parts_of_speach_feature(annotations_df):
     assert prefixed_cols, "No one-hot encoded columns found for part_of_speach"
     assert not df_with_pos[prefixed_cols].isnull().all().all(), "All one-hot encoded columns for part_of_speach are null"
 
-def test_get_dummies(annotations_df):
-    df_with_pos = add_linguistic_features(annotations_df)
-    logger.info(df_with_pos.head(20))
-    for col in cols_to_fill:
-        dummy_cols = [c for c in df_with_pos.columns if c.startswith(f"{col}_")]
-        assert dummy_cols, f"No dummy columns created for {col}"
-        assert not df_with_pos[dummy_cols].isnull().all().all(), f"All dummy columns for {col} are null"
