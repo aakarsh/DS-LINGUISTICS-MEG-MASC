@@ -1,6 +1,6 @@
 * 4/10/2025
 
+- Finshed download of the dataset.
 
-Start work on
 
 * 5/10/2025

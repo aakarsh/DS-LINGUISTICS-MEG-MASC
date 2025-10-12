@@ -1,4 +1,5 @@
 
+from matplotlib.pylab import annotations
 import numpy as np
 import pandas as pd
 import mne
@@ -6,10 +7,13 @@ from pathlib import Path
 
 from wordfreq import zipf_frequency
 import logging
-
+import spacy
 
 logger = logging.getLogger("linguistics.reader.data")
 logger.setLevel(logging.DEBUG)
+
+#spacy.cli.download("en_core_web_sm")
+nlp = spacy.load("en_core_web_sm")
 
 def parse_annotations(raw: mne.io.Raw) -> pd.DataFrame:
     meta_list = []
@@ -22,6 +26,46 @@ def parse_annotations(raw: mne.io.Raw) -> pd.DataFrame:
         meta_list.append(d)
     logger.info(f"Found {len(meta_list)} annotations")
     return pd.DataFrame(meta_list)
+
+class AnnotationsHelper:
+    
+    @staticmethod
+    def parse_annotations(raw: mne.io.Raw) -> pd.DataFrame:
+        return parse_annotations(raw)
+    
+    @staticmethod
+    def add_voiced_feature(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.DataFrame:
+        return add_voiced_feature(df, phone_information)
+    
+    @staticmethod
+    def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
+        return add_word_frequency_feature(df)
+    
+    @staticmethod
+    def add_part_of_speach_feature(df: pd.DataFrame) -> pd.DataFrame:
+        return add_part_of_speach_feature(df)
+
+def add_part_of_speach_feature(df: pd.DataFrame) -> pd.DataFrame:
+    logger.info("Adding part-of-speach feature")
+    df = df.copy()
+    words = df.query('kind=="word"')
+    full_document = " ".join(words.word.tolist())
+    doc = nlp(full_document)
+    pos_information = pd.DataFrame([(token.text, token.pos_) for token in doc], 
+                                   columns=["word", "part_of_speach"])
+    #pos_information = pos_information.drop_duplicates(subset=["word"])
+    logger.debug(f"Processing word: {w.word}")
+    df["part_of_speach"] = np.nan
+    words = df.query('kind=="word"')
+    for w in words.itertuples():
+        doc = nlp(w.word)
+        if len(doc) == 1:
+            df.loc[w.Index, "part_of_speach"] = doc[0].pos_
+        else:
+            logger.warning(f"Word '{w.word}' was tokenized into multiple tokens: {[token.text for token in doc]}")
+            df.loc[w.Index, "part_of_speach"] = doc[0].pos_  # Assign the POS of the first token as a fallback
+    logger.info(f"Part-of-speach feature added with {df['part_of_speach'].notna().sum()} words")
+    return df
 
 def add_voiced_feature(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.DataFrame:
     logger.info("Adding voiced feature")
@@ -50,14 +94,14 @@ def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
 def create_epochs(data_tuple: tuple) -> mne.Epochs:
     raw, meta = data_tuple
     phoneme_meta = meta.query('kind=="phoneme"').copy()
-    
-    events = np.c_[
-        phoneme_meta.onset * raw.info["sfreq"], 
+
+    phoneme_events = np.c_[
+        phoneme_meta.onset * raw.info["sfreq"],
         np.ones((len(phoneme_meta), 2))
     ].astype(int)
     
     return mne.Epochs(
-        raw, events, tmin=-0.200, tmax=0.6, decim=10,
+        raw, phoneme_events, tmin=-0.200, tmax=0.6, decim=10,
         baseline=(-0.2, 0.0), metadata=meta.query('kind=="phoneme"'),
         preload=True, event_repeated="drop"
     )

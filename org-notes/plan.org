@@ -1,0 +1,19 @@
+* DONE Setup Environment
+  - [x] Create virtual environment and install dependencies from `pyproject.toml`.
+* TODO Add and decode other linguistic features
+  - [ ] add part of speech tags
+  - [ ] add DEP type.
+  - [ ] add TAG
+  - [ ] verb morphological features
+  - [ ] Named entity.
+
+* TODO Validate Core Analysis
+  - [ ]
+  - [ ]
+
+* TODO Run Full Analysis
+  - [ ] Run the analysis for all subjects using `scripts/0-simple-analysis.py`.
+  - [ ] Generate and review the comparison plots and heatmaps.
+
+* TODO Extend Linguistic Features
+  - [ ] Implement decoding for a new phonetic feature (e.g., plosives) based on `writing/notes.md`.

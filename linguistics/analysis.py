@@ -38,35 +38,38 @@ def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int =-1) -> pd.DataFr
     return pd.DataFrame(dict(score=scores, time=epochs.times))
 
 
-def process_bids_file(bids_path, phonetic_information: pd.DataFrame, n_jobs=-1) -> mne.Epochs | None:
+def process_bids_file(bids_path: mne_bids.BIDSPath, phonetic_information: pd.DataFrame, n_jobs=-1) -> mne.Epochs | None:
     try:
         raw = mne_bids.read_raw_bids(bids_path)
         raw.pick_types(meg=True).load_data().filter(0.5, 30.0, n_jobs=n_jobs)
-        
             
-        meta = parse_annotations(raw)
-        meta = add_voiced_feature(meta, phonetic_information)
-        meta = add_word_frequency_feature(meta)
-        epochs = create_epochs((raw, meta))
+        meta_data = parse_annotations(raw)
+        meta_data = add_voiced_feature(meta_data, phonetic_information)
+        meta_data = add_word_frequency_feature(meta_data)
+        
+        epochs = create_epochs((raw, meta_data))
         epochs = clean_epochs(epochs)
         
         return epochs
     except FileNotFoundError:
         return None
-    
+
+def to_bids_path(subject_id: str, session_id: int, task_id: int, config: Config) -> mne_bids.BIDSPath:
+    return mne_bids.BIDSPath(
+        subject=subject_id, session=str(session_id), task=str(task_id),
+        datatype="meg", root=config.bids_root
+    )
+
 def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.DataFrame, dict]: 
     print(f"\nProcessing subject: {subject_id}")
     all_epochs = []
-    for session in range(2):
-        for task in range(4):
-            bids_path = mne_bids.BIDSPath(
-                subject=subject_id, session=str(session), task=str(task),
-                datatype="meg", root=config.bids_root
-            )
+    for session_id in range(2):
+        for task_id in range(4):
+            bids_path = to_bids_path(subject_id, session_id, task_id, config)
             epochs = process_bids_file(bids_path, config.phonetic_information, n_jobs=n_jobs)
             if epochs:
                 all_epochs.append(epochs)
-    
+                
     if not all_epochs:
         return pd.DataFrame(), {}
     
