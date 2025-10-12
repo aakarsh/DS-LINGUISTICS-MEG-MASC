@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.calibration import cross_val_predict
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, StandardScaler
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.pipeline import make_pipeline
 import toolz as Z 
 from tqdm import trange
@@ -15,14 +15,14 @@ from linguistics.reader.data import add_voiced_feature, add_word_frequency_featu
 
 def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int =-1) -> pd.DataFrame:
     X = epochs.get_data() * 1e13
-    y = epochs.metadata[feature].values.astype(float)
+    y = epochs.metadata[feature].values.astype(int)
     
     if len(set(y)) > 2: 
         y = y > np.nanmedian(y)
 
     model = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis())
-    cv = KFold(5, shuffle=True, random_state=0)
-    
+    cv = StratifiedKFold(5, shuffle=True, random_state=0)
+
     n_trials, _, n_times = X.shape
     preds = np.zeros((n_trials, n_times))
 
