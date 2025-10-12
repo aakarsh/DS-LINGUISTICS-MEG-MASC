@@ -22,3 +22,5 @@ dependencies = [
     "tqdm>=4.67.1",
     "wordfreq>=3.1.1",
 ]
+[tool.pytest.ini_options]
+pythonpath = "."
