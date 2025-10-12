@@ -75,16 +75,33 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         return pd.DataFrame(), {}
     
     subject_epochs = mne.concatenate_epochs(all_epochs)
-    
-    results_voiced = run_decoding(subject_epochs["not is_word_onset"], "voiced", n_jobs=n_jobs)
-    results_wordfreq = run_decoding(subject_epochs["is_word_onset"], "wordfreq", n_jobs=n_jobs)
-    
-    results_voiced["contrast"], results_wordfreq["contrast"] = "voiced", "wordfreq"
-    results_voiced["subject"], results_wordfreq["subject"] = subject_id, subject_id
-    
-    all_results = pd.concat([results_voiced, results_wordfreq], ignore_index=True)
-    
-    return all_results, None
+
+    features_to_decode = {
+        "voiced": subject_epochs["not is_word_onset"],
+        "wordfreq": subject_epochs["is_word_onset"]
+    }
+
+    feature_prefixes = ['part_of_speech_', 'VerbForm_', 'Tense_', 'Number_', 'Person_', 'Mood_', 'Definite_', 'PronType_']
+    morph_feature_names = [
+        col for col in subject_epochs.metadata.columns
+        if col.startswith(tuple(feature_prefixes))
+    ]
+
+    for feature_name in morph_feature_names:
+        features_to_decode[feature_name] = subject_epochs["is_word_onset"]
+
+    for feature, epoch_subset in features_to_decode.items():
+        results_df = run_decoding(epoch_subset, feature, n_jobs=n_jobs)
+        results_df["contrast"] = feature
+        results_df["subject"] = subject_id
+        all_results.append(results_df)
+
+    if not all_results:
+        return pd.DataFrame(), {}
+
+    final_results = pd.concat(all_results, ignore_index=True)
+
+    return final_results, None
 
 
 def analyze_all_subjects(config: Config) -> pd.DataFrame:
