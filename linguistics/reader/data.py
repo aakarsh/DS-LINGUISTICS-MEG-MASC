@@ -79,9 +79,24 @@ def add_linguistic_features(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     df_with_features = df.copy()
+    original_columns = set(df_with_features.columns)
     df_with_features['part_of_speach'] = df_with_features.index.map(pos_map)
+
     morph_df = pd.DataFrame.from_dict(morph_map, orient='index')
     df_with_features = pd.concat([df_with_features, morph_df], axis=1)
+    logger.info("Applying one-hot encoding...")
+    # Identify newly added morphology columns
+    cols_to_encode = list(set(df_with_features.columns) - original_columns)
+    #morph_cols = ['part_of_speech', 'VerbForm', 'Tense', 'Number', 'Person', 'Mood', 'Definite', 'PronType']
+    #cols_to_encode = [col for col in morph_cols if col in df_with_features.columns]
+
+    for col in cols_to_encode:
+        df_with_features[col] = df_with_features[col].fillna('none')
+
+    df_with_features = pd.get_dummies(df_with_features, columns=cols_to_encode, prefix=cols_to_encode)
+    logger.info(f"Encoded features: {cols_to_encode}")
+
+
 
     return df_with_features
 

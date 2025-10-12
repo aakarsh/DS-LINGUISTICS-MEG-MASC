@@ -11,7 +11,7 @@ import toolz as Z
 from tqdm import trange
 
 from linguistics.env import Config
-from linguistics.reader.data import add_voiced_feature, add_word_frequency_feature, clean_epochs, create_epochs, parse_annotations
+from linguistics.reader.data import add_voiced_feature, add_word_frequency_feature, add_linguistic_features, clean_epochs, create_epochs, parse_annotations
 
 def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int =-1) -> pd.DataFrame:
     X = epochs.get_data() * 1e13
@@ -46,7 +46,8 @@ def process_bids_file(bids_path: mne_bids.BIDSPath, phonetic_information: pd.Dat
         meta_data = parse_annotations(raw)
         meta_data = add_voiced_feature(meta_data, phonetic_information)
         meta_data = add_word_frequency_feature(meta_data)
-        
+        meta_data = add_linguistic_features(meta_data)
+ 
         epochs = create_epochs((raw, meta_data))
         epochs = clean_epochs(epochs)
         

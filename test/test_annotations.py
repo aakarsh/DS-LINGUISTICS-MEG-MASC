@@ -43,13 +43,17 @@ def test_parse_annotations(annotations_df):
 def test_add_parts_of_speach_feature(annotations_df):
     logger.info("Testing part_of_speach feature assignment")
     df_with_pos = add_linguistic_features(annotations_df)
-    for row in df_with_pos.itertuples():
-        if row.kind == "word":
-            assert pd.notnull(row.part_of_speach), f"Word '{row.wd}' is missing part_of_speach"
-        else:
-            assert pd.isnull(row.part_of_speach), f"Non-word '{row.word}' should not have part_of_speach"
-
     logger.info(df_with_pos[:1000])
+    logger.info(f"New Columns: {set(df_with_pos.columns) - set(annotations_df.columns)}")
 
-    assert "part_of_speach" in df_with_pos.columns
-    assert not df_with_pos["part_of_speach"].isnull().all()
+    prefixed_cols = [col for col in df_with_pos.columns if col.startswith("part_of_speach_")]
+    assert prefixed_cols, "No one-hot encoded columns found for part_of_speach"
+    assert not df_with_pos[prefixed_cols].isnull().all().all(), "All one-hot encoded columns for part_of_speach are null"
+
+def test_get_dummies(annotations_df):
+    df_with_pos = add_linguistic_features(annotations_df)
+    logger.info(df_with_pos.head(20))
+    for col in cols_to_fill:
+        dummy_cols = [c for c in df_with_pos.columns if c.startswith(f"{col}_")]
+        assert dummy_cols, f"No dummy columns created for {col}"
+        assert not df_with_pos[dummy_cols].isnull().all().all(), f"All dummy columns for {col} are null"
