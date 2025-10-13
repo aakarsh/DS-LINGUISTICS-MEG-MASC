@@ -19,15 +19,15 @@ logger = logging.getLogger("linguistics.reader.analysis")
 
 def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =-1) -> pd.DataFrame:
     X_full = epochs.get_data() * 1e13
-    y_full = epochs.metadata[feature].values
+    y_series = epochs.metadata[feature]
 
-    valid_trials = ~np.isnan(y_full)
+    valid_trials = ~y_series.isna()
     if not np.any(valid_trials):
         logger.warning(f"Warning: No valid (non-NaN) data for feature '{feature}'. Skipping.")
         return pd.DataFrame()
 
     X = X_full[valid_trials]
-    y = y_full[valid_trials].astype(int)
+    y = y_series[valid_trials].values.astype(int)
 
     _, counts = np.unique(y, return_counts=True)
 
