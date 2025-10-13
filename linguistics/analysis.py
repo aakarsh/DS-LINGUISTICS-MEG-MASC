@@ -1,6 +1,7 @@
 from typing import Tuple
 import mne
 import mne_bids
+import logging
 import numpy as np
 import pandas as pd
 from sklearn.calibration import cross_val_predict
@@ -13,28 +14,45 @@ from tqdm import trange
 from linguistics.env import Config
 from linguistics.reader.data import add_voiced_feature, add_word_frequency_feature, add_linguistic_features, clean_epochs, create_epochs, parse_annotations
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("linguistics.reader.analysis")
+
 def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int =-1) -> pd.DataFrame:
     X = epochs.get_data() * 1e13
     y = epochs.metadata[feature].values.astype(int)
-    
+    n_splits = 5
+    _, counts = np.unique(y, return_counts=True)
+
+    if np.any(counts < n_splits):
+        logger.warn(f"Warning: Cannot decode '{feature}'. Not enough samples for at least one class. Counts: {counts}")
+        return pd.DataFrame()
+ 
     if len(set(y)) > 2: 
         y = y > np.nanmedian(y)
 
+
     model = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis())
-    cv = StratifiedKFold(5, shuffle=True, random_state=0)
+    cv = StratifiedKFold(n_splits, shuffle=True, random_state=0)
 
     n_trials, _, n_times = X.shape
     preds = np.zeros((n_trials, n_times))
 
     for t in trange(n_times, desc=f"Decoding {feature}"):
-        preds[:, t] = cross_val_predict(
+        predictions = cross_val_predict(
             model, X[:, :, t], y, cv=cv, method="predict_proba", n_jobs=n_jobs
         )[:, 1]
+        if predictions.ndim == 1:
+            print(f"Warning: predict_proba returned 1D array at timestep {t}. Check class balance.")
+            continue
+        preds[:, t] = predictions
 
-    X, Y = y[:, None], preds
-    X, Y = X - X.mean(0), Y - Y.mean(0)
-    scores = (X * Y).sum(0) / ((X**2).sum(0)**0.5 * (Y**2).sum(0)**0.5)
-    
+
+    X_corr, Y_corr = y[:, None], preds
+    X_corr, Y_corr = X_corr - X_corr.mean(0), Y_corr - Y_corr.mean(0)
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        scores = (X_corr * Y_corr).sum(0) / ((X_corr**2).sum(0)**0.5 * (Y_corr**2).sum(0)**0.5)
+
     return pd.DataFrame(dict(score=scores, time=epochs.times))
 
 
@@ -89,7 +107,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
 
     for feature_name in morph_feature_names:
         features_to_decode[feature_name] = subject_epochs["is_word_onset"]
-
+    all_results = []
     for feature, epoch_subset in features_to_decode.items():
         results_df = run_decoding(epoch_subset, feature, n_jobs=n_jobs)
         results_df["contrast"] = feature
