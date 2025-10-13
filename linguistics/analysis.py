@@ -17,13 +17,21 @@ from linguistics.reader.data import add_voiced_feature, add_word_frequency_featu
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("linguistics.reader.analysis")
 
-def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int =-1) -> pd.DataFrame:
-    X = epochs.get_data() * 1e13
-    y = epochs.metadata[feature].values.astype(int)
-    n_splits = 5
+def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =-1) -> pd.DataFrame:
+    X_full = epochs.get_data() * 1e13
+    y_full = epochs.metadata[feature].values
+
+    valid_trials = ~np.isnan(y_full)
+    if not np.any(valid_trials):
+        logger.warning(f"Warning: No valid (non-NaN) data for feature '{feature}'. Skipping.")
+        return pd.DataFrame()
+
+    X = X_full[valid_trials]
+    y = y_full[valid_trials].astype(int)
+
     _, counts = np.unique(y, return_counts=True)
 
-    if np.any(counts < n_splits):
+    if len(counts) < 2 or np.any(counts < n_splits):
         logger.warn(f"Warning: Cannot decode '{feature}'. Not enough samples for at least one class. Counts: {counts}")
         return pd.DataFrame()
  
@@ -45,7 +53,6 @@ def run_decoding(epochs: mne.Epochs, feature: str, n_jobs: int =-1) -> pd.DataFr
             print(f"Warning: predict_proba returned 1D array at timestep {t}. Check class balance.")
             continue
         preds[:, t] = predictions
-
 
     X_corr, Y_corr = y[:, None], preds
     X_corr, Y_corr = X_corr - X_corr.mean(0), Y_corr - Y_corr.mean(0)
@@ -81,24 +88,35 @@ def to_bids_path(subject_id: str, session_id: int, task_id: int, config: Config)
 
 def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.DataFrame, dict]: 
     print(f"\nProcessing subject: {subject_id}")
-    all_epochs = []
-    for session_id in range(2):
-        for task_id in range(4):
-            bids_path = to_bids_path(subject_id, session_id, task_id, config)
-            epochs = process_bids_file(bids_path, config.phonetic_information, n_jobs=n_jobs)
-            if epochs:
-                all_epochs.append(epochs)
-                
-    if not all_epochs:
-        return pd.DataFrame(), {}
-    
-    subject_epochs = mne.concatenate_epochs(all_epochs)
+
+    cache_dir = config.output_dir / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / f"{subject_id}-epo.fif"
+
+    if cache_path.exists():
+        logger.info(f"  -> Found cache, loading preprocessed epochs from: {cache_path}")
+        subject_epochs = mne.read_epochs(cache_path, preload=True)
+    else:
+        all_epochs = []
+        for session_id in range(2):
+            for task_id in range(4):
+                bids_path = to_bids_path(subject_id, session_id, task_id, config)
+                epochs = process_bids_file(bids_path, config.phonetic_information, n_jobs=n_jobs)
+                if epochs:
+                    all_epochs.append(epochs)
+
+        if not all_epochs:
+            return pd.DataFrame(), {}
+
+        subject_epochs = mne.concatenate_epochs(all_epochs)
+        logging.info(f"  -> Saving preprocessed epochs to cache: {cache_path}")
+        subject_epochs.save(cache_path, overwrite=True)
 
     features_to_decode = {
         "voiced": subject_epochs["not is_word_onset"],
         "wordfreq": subject_epochs["is_word_onset"]
     }
-
+    # This needs to be generated more dynamically
     feature_prefixes = ['part_of_speech_', 'VerbForm_', 'Tense_', 'Number_', 'Person_', 'Mood_', 'Definite_', 'PronType_']
     morph_feature_names = [
         col for col in subject_epochs.metadata.columns
@@ -107,6 +125,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
 
     for feature_name in morph_feature_names:
         features_to_decode[feature_name] = subject_epochs["is_word_onset"]
+
     all_results = []
     for feature, epoch_subset in features_to_decode.items():
         results_df = run_decoding(epoch_subset, feature, n_jobs=n_jobs)
