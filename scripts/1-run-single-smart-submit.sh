@@ -4,8 +4,9 @@
 PROJECT_ROOT=/home/tu/tu_tu/tu_zxoxo45/TUE-SUMMER-2025/projects/DS-LINGUISTICS-MEG-MASC
 
 SUBJECT_IDS=(
-    "01" "02" 
-    #"03" "04" "05" "06" "07" "08" "09" "10" "11"
+    # "01" "02" 
+    "03" "04" 
+    #"05" "06" "07" "08" "09" "10" "11"
 )
 
 # Check which subjects are already processed
