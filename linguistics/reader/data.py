@@ -85,6 +85,7 @@ def add_linguistic_features(df: pd.DataFrame) -> pd.DataFrame:
     morph_df = pd.DataFrame.from_dict(morph_map, orient='index')
     df_with_features = pd.concat([df_with_features, morph_df], axis=1)
     feature_cols  = ['part_of_speach'] + list(morph_df.columns)
+    # Forward fill to mark the phonems rows as well.
     df_with_features[feature_cols] = df_with_features[feature_cols].ffill()
     logger.info("Applying one-hot encoding...")
     # Identify newly added morphology columns

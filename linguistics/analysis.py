@@ -143,7 +143,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
             return pd.DataFrame(), {}
 
         subject_epochs = mne.concatenate_epochs(all_epochs)
-        logging.info(f"  -> Saving preprocessed epochs to cache: {cache_path}")
+        logger.info(f"  -> Saving preprocessed epochs to cache: {cache_path}")
         subject_epochs.save(cache_path, overwrite=True)
 
     features_to_decode = {
@@ -159,6 +159,30 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
 
     for feature_name in morph_feature_names:
         features_to_decode[feature_name] = subject_epochs["is_word_onset"]
+
+    logging.debug("\n--- Verifying Feature Diversity ---")
+    n_splits = 5  # Must match the n_splits in run_decoding
+    decodable_features = []
+    undecodable_features = {}
+    metadata = subject_epochs.metadata
+
+    for feature, epoch_subset in features_to_decode.items():
+        if feature in epoch_subset.metadata.columns:
+            counts = epoch_subset.metadata[feature].dropna().value_counts()
+            if len(counts) >= 2 and counts.min() >= n_splits:
+                decodable_features.append(feature)
+            else:
+                undecodable_features[feature] = counts.to_dict()
+
+    print(f"Found {len(decodable_features)} decodable features.")
+    if undecodable_features:
+        print("\nSkipping features with insufficient samples:")
+        for feature, counts in undecodable_features.items():
+            print(f"  - '{feature}': Counts={counts}")
+    logger.debug("-------------------------------------\n")
+    features_to_decode = { # get voicing to work again before doing anything else.
+        "voiced": subject_epochs["not is_word_onset"]
+    }
 
     all_results = []
     for feature, epoch_subset in features_to_decode.items():

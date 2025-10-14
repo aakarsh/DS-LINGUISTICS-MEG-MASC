@@ -47,6 +47,9 @@ def test_add_parts_of_speach_feature(annotations_df):
     logger.info(f"New Columns: {set(df_with_pos.columns) - set(annotations_df.columns)}")
 
     prefixed_cols = [col for col in df_with_pos.columns if col.startswith("part_of_speach_")]
+    word_rows = df_with_pos[df_with_pos['kind'] == 'word']
+    assert np.allclose(word_rows[prefixed_cols].sum(axis=1), 1.0)
+
     assert prefixed_cols, "No one-hot encoded columns found for part_of_speach"
     assert not df_with_pos[prefixed_cols].isnull().all().all(), "All one-hot encoded columns for part_of_speach are null"
 
