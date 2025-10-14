@@ -84,7 +84,7 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
             model, X[:, :, t], y, cv=cv, method="predict_proba", n_jobs=n_jobs
         )[:, 1]
         if predictions.ndim == 1:
-            print(f"Warning: predict_proba returned 1D array at timestep {t}. Check class balance.")
+            logger.warn(f"Warning: predict_proba returned 1D array at timestep {t}. Check class balance.")
             continue
         preds[:, t] = predictions
 
