@@ -28,6 +28,8 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
 
     X_full = epochs.get_data() * 1e13
     y_series = epochs.metadata[feature]
+    # Add a tiny amount of noise to prevent zero variance issues
+    X_full += 1e-12 * np.random.randn(*X_full.shape)
 
     valid_trials = ~y_series.isna()
     if not np.any(valid_trials):
@@ -71,10 +73,33 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     if mean_within_var > 0:
         stats["snr_estimate"] = mean_diff_sq / mean_within_var
 
-    logger.info(f"Statistics for feature '{feature}': {stats}")
-
     model = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis())
     cv = StratifiedKFold(n_splits, shuffle=True, random_state=0)
+
+
+    logger.info(f"Statistics for feature '{feature}': {stats}")
+
+    # --- START DEBUGGING SNIPPET ---
+    logger.debug(f"--- Debugging Folds for feature: '{feature}' ---")
+    unique_labels, counts = np.unique(y, return_counts=True)
+    logger.debug(f"Overall class distribution: {dict(zip(unique_labels, counts))}")
+
+    cv_debug = cv
+    fold_is_problematic = False
+    for i, (train_index, _) in enumerate(cv_debug.split(X, y)):
+        y_train = y[train_index]
+        train_labels, train_counts = np.unique(y_train, return_counts=True)
+        logger.debug(f"  Fold {i} training set distribution: {dict(zip(train_labels, train_counts))}")
+        if len(train_labels) < 2:
+            logger.error(f"  !! Problem in Fold {i}: Only one class present in training data.")
+            fold_is_problematic = True
+
+    if fold_is_problematic:
+        logger.error("At least one fold is invalid. Stopping before full decoding.")
+        return pd.DataFrame() # Stop execution for this feature
+    logger.debug("--- Fold debugging complete. All folds are valid. ---")
+    # --- END DEBUGGING SNIPPET ---
+
 
     n_trials, _, n_times = X.shape
     preds = np.zeros((n_trials, n_times))
@@ -195,7 +220,6 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         return pd.DataFrame(), {}
 
     final_results = pd.concat(all_results, ignore_index=True)
-    # --- HIER EINFÜGEN, UM ZU PRÜFEN ---
     debug_path = config.output_dir / f"{subject_id}_metadata_for_debug.csv"
     print(f"--- DEBUG: Speichere Metadaten zur Überprüfung in {debug_path} ---")
     subject_epochs.metadata.to_csv(debug_path)
