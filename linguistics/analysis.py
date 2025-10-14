@@ -28,8 +28,15 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
 
     X = X_full[valid_trials]
     y = y_series[valid_trials].values.astype(int)
+    #    If so, binarize it by splitting it at the median.
+    if pd.api.types.is_numeric_dtype(y) and len(np.unique(y)) > 2:
+        y = (y > np.nanmedian(y)).astype(int)
+    else:
+        y = y.astype(int)
 
-    _, counts = np.unique(y, return_counts=True)
+    unique_labels, counts = np.unique(y, return_counts=True)
+    stats["n_classes"] = len(unique_labels)
+    stats["class_counts"] = counts
 
     if len(counts) < 2 or np.any(counts < n_splits):
         logger.warn(f"Warning: Cannot decode '{feature}'. Not enough samples for at least one class. Counts: {counts}")
@@ -38,6 +45,25 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     if len(set(y)) > 2: 
         y = y > np.nanmedian(y)
 
+    mean_class_0 = X[y == 0].mean(axis=0)
+    mean_class_1 = X[y == 1].mean(axis=0)
+
+
+    diff = mean_class_0 - mean_class_1
+    stats["mean_diff_rms"] = np.sqrt(np.mean(diff**2))
+
+
+    var_class_0 = X[y == 0].var(axis=0)
+    var_class_1 = X[y == 1].var(axis=0)
+
+
+    mean_diff_sq = np.mean(diff**2)
+    mean_within_var = np.mean(var_class_0) + np.mean(var_class_1)
+
+    if mean_within_var > 0:
+        stats["snr_estimate"] = mean_diff_sq / mean_within_var
+
+    logger.info(f"Statistics for feature '{feature}': {stats}")
 
     model = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis())
     cv = StratifiedKFold(n_splits, shuffle=True, random_state=0)
@@ -137,6 +163,11 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         return pd.DataFrame(), {}
 
     final_results = pd.concat(all_results, ignore_index=True)
+    # --- HIER EINFÜGEN, UM ZU PRÜFEN ---
+    debug_path = config.output_dir / f"{subject_id}_metadata_for_debug.csv"
+    print(f"--- DEBUG: Speichere Metadaten zur Überprüfung in {debug_path} ---")
+    subject_epochs.metadata.to_csv(debug_path)
+    # ------------------------------------
 
     return final_results, None
 

@@ -9,10 +9,10 @@ from wordfreq import zipf_frequency
 import logging
 import spacy
 import toolz as Z
+
 logger = logging.getLogger("linguistics.reader.data")
 logger.setLevel(logging.DEBUG)
 
-#spacy.cli.download("en_core_web_sm")
 nlp = spacy.load("en_core_web_sm")
 
 def parse_annotations(raw: mne.io.Raw) -> pd.DataFrame:
