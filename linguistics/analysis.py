@@ -7,6 +7,8 @@ import pandas as pd
 from sklearn.calibration import cross_val_predict
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, StandardScaler
 from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+
 from sklearn.pipeline import make_pipeline
 import toolz as Z 
 from tqdm import trange
@@ -73,7 +75,7 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     if mean_within_var > 0:
         stats["snr_estimate"] = mean_diff_sq / mean_within_var
 
-    model = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis())
+    model = make_pipeline(StandardScaler(), LogisticRegression())
     cv = StratifiedKFold(n_splits, shuffle=True, random_state=0)
 
 
