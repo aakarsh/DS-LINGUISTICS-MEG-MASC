@@ -18,6 +18,14 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("linguistics.reader.analysis")
 
 def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =-1) -> pd.DataFrame:
+    stats = {
+        "feature": feature,
+        "n_classes": 0,
+        "class_counts": [],
+        "mean_diff_rms": np.nan,
+        "snr_estimate": np.nan
+    }
+
     X_full = epochs.get_data() * 1e13
     y_series = epochs.metadata[feature]
 

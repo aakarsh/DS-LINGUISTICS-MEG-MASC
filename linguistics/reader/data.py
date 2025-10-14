@@ -97,7 +97,7 @@ def add_linguistic_features(df: pd.DataFrame) -> pd.DataFrame:
     logger.info(f"Encoded features: {cols_to_encode}")
 
     logging.debug("\n--- DEBUG: Metadata Snippet ---")
-    relevant_cols = ['kind', 'word', 'is_word_onset'] + [c for c in df_with_features.columns if 'Tense_' in c]
+    relevant_cols = ['kind', 'word'] + [c for c in df_with_features.columns if 'Tense_' in c]
     logging.debug(df_with_features[relevant_cols].head(20).to_string())
     logging.debug("----------------------------\n")
 
