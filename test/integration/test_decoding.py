@@ -20,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 def dummy_subject_id(bids_root):
     return '01'
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def config():
     return Config.load_config()
 
@@ -28,10 +28,44 @@ def config():
 def bids_root(config):
     return config.bids_root
 
-@pytest.fixture
-def processed_epochs_for_dummy_subject(dummy_subject_id):
-    return concatenate_processed_epochs(dummy_subject_id, Config.load_config(), session_range=range(1), task_range=range(1), crop_limit=None, n_jobs=-1)
+@pytest.fixture(scope="module")
+def processed_epochs_for_dummy_subject(dummy_subject_id, config):
+    return concatenate_processed_epochs(dummy_subject_id, config, session_range=range(1), task_range=range(1), crop_limit=None, n_jobs=-1)
 
-def test_first_decoding_test(processed_epochs_for_dummy_subject):
+def test_epochs_are_loaded_correctly(processed_epochs_for_dummy_subject):
     assert processed_epochs_for_dummy_subject is not None, "Processed epochs should not be None"
-    logging.debug(f"something")
+    assert isinstance(processed_epochs_for_dummy_subject, mne.BaseEpochs)
+    assert not processed_epochs_for_dummy_subject.metadata.empty
+    logger.info(f"Successfully loaded {len(processed_epochs_for_dummy_subject)} epochs for the dummy subject.")
+
+def test_feature_balance_in_real_data(processed_epochs_for_dummy_subject):
+    metadata = processed_epochs_for_dummy_subject.metadata
+
+    feature_prefixes = ['part_of_speach_', 'VerbForm_', 'Tense_', 'Number_', 'Person_', 'Mood_', 'Definite_', 'PronType_']
+    features_to_check = [
+        col for col in metadata.columns
+        if col.startswith(tuple(feature_prefixes))
+    ]
+    features_to_check.extend(['voiced', 'wordfreq'])
+
+    problematic_features = []
+
+    for feature in features_to_check:
+        if feature not in metadata.columns:
+            continue
+        if feature == 'wordfreq':
+            y_series = metadata[feature].dropna()
+            y = (y_series > y_series.median()).astype(int)
+            counts = y.value_counts()
+        else:
+            counts = metadata[feature].dropna().value_counts()
+
+        if len(counts) < 2 or counts.min() < N_SPLITS:
+            problematic_features.append(f"  - '{feature}': Counts={counts.to_dict()}")
+
+    assert not problematic_features, (
+        f"Found {len(problematic_features)} features that are too imbalanced for {N_SPLITS}-fold cross-validation:\n"
+        + "\n".join(problematic_features)
+    )
+    logger.info(f"All {len(features_to_check)} checked features have sufficient samples for decoding.")
+
