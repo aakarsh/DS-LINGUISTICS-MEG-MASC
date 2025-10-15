@@ -159,6 +159,10 @@ def process_epochs(subject_id: str, config: Config, session_range = range(2), ta
                 all_epochs.append(epochs)
     return all_epochs
 
+def concatenate_processed_epochs(subject_id: str, config:  Config, session_range = range(2), task_range=range(4), crop_limit=None, n_jobs=-1):
+    all_epochs = process_epochs(subject_id, config, n_jobs=n_jobs)
+    subject_epochs = mne.concatenate_epochs(all_epochs)
+    return subject_epochs
 
 def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.DataFrame, dict]: 
     print(f"\nProcessing subject: {subject_id}")
@@ -177,6 +181,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         subject_epochs = mne.concatenate_epochs(all_epochs)
         logger.info(f"  -> Saving preprocessed epochs to cache: {cache_path}")
         subject_epochs.save(cache_path, overwrite=True)
+
     features_to_decode = {
         "voiced": subject_epochs["not is_word_onset"],
         "wordfreq": subject_epochs["is_word_onset"]
