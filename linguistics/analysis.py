@@ -123,12 +123,15 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     return pd.DataFrame(dict(score=scores, time=epochs.times))
 
 
-def process_bids_file(bids_path: mne_bids.BIDSPath, phonetic_information: pd.DataFrame, n_jobs=-1) -> mne.Epochs | None:
+def process_bids_file(bids_path: mne_bids.BIDSPath, phonetic_information: pd.DataFrame, n_jobs=-1, crop_limit=None) -> mne.Epochs | None:
     try:
         raw = mne_bids.read_raw_bids(bids_path)
+        if crop_limit:
+            raw.crop(tmax=crop_limit)
         raw.pick_types(meg=True).load_data().filter(0.5, 30.0, n_jobs=n_jobs)
             
         meta_data = parse_annotations(raw)
+        logger.info(f"Parsed {len(meta_data)} annotations from raw data.")
         meta_data = add_voiced_feature(meta_data, phonetic_information)
         meta_data = add_word_frequency_feature(meta_data)
         meta_data = add_linguistic_features(meta_data)
@@ -146,12 +149,12 @@ def to_bids_path(subject_id: str, session_id: int, task_id: int, config: Config)
         datatype="meg", root=config.bids_root
     )
 
-def process_epochs(subject_id: str, config: Config, session_range = range(2), task_range=range(4),  n_jobs=-1) -> List[mne.Epochs]:
+def process_epochs(subject_id: str, config: Config, session_range = range(2), task_range=range(4),  crop_limit=None, n_jobs=-1) -> List[mne.Epochs]:
     all_epochs = []
     for session_id in session_range:
         for task_id in task_range:
             bids_path = to_bids_path(subject_id, session_id, task_id, config)
-            epochs = process_bids_file(bids_path, config.phonetic_information, n_jobs=n_jobs)
+            epochs = process_bids_file(bids_path, config.phonetic_information, n_jobs=n_jobs, crop_limit = crop_limit)
             if epochs:
                 all_epochs.append(epochs)
     return all_epochs

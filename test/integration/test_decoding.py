@@ -35,7 +35,7 @@ def processed_bids_file(bids_root):
 
 @pytest.fixture
 def processed_epochs_for_dummy_subject(dummy_subject_id):
-    return process_epochs(dummy_subject_id, Config.load_config(), session_range=range(1), task_range=range(1), n_jobs=-1)
+    return process_epochs(dummy_subject_id, Config.load_config(), session_range=range(1), task_range=range(1), crop_limit=None, n_jobs=-1)
 
 def test_first_decoding_test(processed_epochs_for_dummy_subject):
     assert processed_epochs_for_dummy_subject is not None, "Processed epochs should not be None"
