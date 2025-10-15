@@ -16,7 +16,7 @@ import logging
 logger = logging.getLogger("test_annotations")
 logger.setLevel(logging.DEBUG)
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def dummy_subject_id(bids_root):
     return '01'
 
@@ -24,7 +24,7 @@ def dummy_subject_id(bids_root):
 def config():
     return Config.load_config()
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def bids_root(config):
     return config.bids_root
 
@@ -60,9 +60,13 @@ def test_feature_balance_in_real_data(processed_epochs_for_dummy_subject):
         else:
             counts = metadata[feature].dropna().value_counts()
 
-        if len(counts) < 2 or counts.min() < N_SPLITS:
+        if len(counts) < 2 or counts.min() < 5:
             problematic_features.append(f"  - '{feature}': Counts={counts.to_dict()}")
-
+        # Log statistics which give likelihood of decoding the feature
+        logger.info(
+            f"Feature '{feature}': Counts={counts.to_dict()}, "
+            f"Imbalance Ratio={counts.max() / counts.min() if len(counts) > 1 else 'N/A'}"
+        )
     assert not problematic_features, (
         f"Found {len(problematic_features)} features that are too imbalanced for {N_SPLITS}-fold cross-validation:\n"
         + "\n".join(problematic_features)
