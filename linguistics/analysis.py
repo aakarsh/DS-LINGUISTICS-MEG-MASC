@@ -1,4 +1,5 @@
 from typing import Tuple
+from typing import List
 import mne
 import mne_bids
 import logging
@@ -145,6 +146,17 @@ def to_bids_path(subject_id: str, session_id: int, task_id: int, config: Config)
         datatype="meg", root=config.bids_root
     )
 
+def process_epochs(subject_id: str, config: Config, session_range = range(2), task_range=range(4),  n_jobs=-1) -> List[mne.Epochs]:
+    all_epochs = []
+    for session_id in session_range:
+        for task_id in task_range:
+            bids_path = to_bids_path(subject_id, session_id, task_id, config)
+            epochs = process_bids_file(bids_path, config.phonetic_information, n_jobs=n_jobs)
+            if epochs:
+                all_epochs.append(epochs)
+    return all_epochs
+
+
 def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.DataFrame, dict]: 
     print(f"\nProcessing subject: {subject_id}")
 
@@ -156,21 +168,12 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         logger.info(f"  -> Found cache, loading preprocessed epochs from: {cache_path}")
         subject_epochs = mne.read_epochs(cache_path, preload=True)
     else:
-        all_epochs = []
-        for session_id in range(2):
-            for task_id in range(4):
-                bids_path = to_bids_path(subject_id, session_id, task_id, config)
-                epochs = process_bids_file(bids_path, config.phonetic_information, n_jobs=n_jobs)
-                if epochs:
-                    all_epochs.append(epochs)
-
+        all_epochs = process_epochs(subject_id, config, n_jobs=n_jobs)
         if not all_epochs:
             return pd.DataFrame(), {}
-
         subject_epochs = mne.concatenate_epochs(all_epochs)
         logger.info(f"  -> Saving preprocessed epochs to cache: {cache_path}")
         subject_epochs.save(cache_path, overwrite=True)
-
     features_to_decode = {
         "voiced": subject_epochs["not is_word_onset"],
         "wordfreq": subject_epochs["is_word_onset"]
