@@ -78,7 +78,6 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     model = make_pipeline(StandardScaler(), LogisticRegression())
     cv = StratifiedKFold(n_splits, shuffle=True, random_state=0)
 
-
     logger.info(f"Statistics for feature '{feature}': {stats}")
 
     # --- START DEBUGGING SNIPPET ---
@@ -101,7 +100,6 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
         return pd.DataFrame() # Stop execution for this feature
     logger.debug("--- Fold debugging complete. All folds are valid. ---")
     # --- END DEBUGGING SNIPPET ---
-
 
     n_trials, _, n_times = X.shape
     preds = np.zeros((n_trials, n_times))
@@ -188,7 +186,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         features_to_decode[feature_name] = subject_epochs["is_word_onset"]
 
     logging.debug("\n--- Verifying Feature Diversity ---")
-    n_splits = 5  # Must match the n_splits in run_decoding
+    n_splits = 5
     decodable_features = []
     undecodable_features = {}
     metadata = subject_epochs.metadata
