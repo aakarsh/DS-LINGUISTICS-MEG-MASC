@@ -29,11 +29,6 @@ def bids_root(config):
     return config.bids_root
 
 @pytest.fixture
-def processed_bids_file(bids_root):
-    current_dir = Path(__file__).parent
-    return current_dir / Path("caches/processed_bids_cache.fif")
-
-@pytest.fixture
 def processed_epochs_for_dummy_subject(dummy_subject_id):
     return concatenate_processed_epochs(dummy_subject_id, Config.load_config(), session_range=range(1), task_range=range(1), crop_limit=None, n_jobs=-1)
 
