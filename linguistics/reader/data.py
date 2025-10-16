@@ -25,7 +25,8 @@ def parse_annotations(raw: mne.io.Raw) -> pd.DataFrame:
                 d[k] = v
         meta_list.append(d)
     logger.info(f"Found {len(meta_list)} annotations")
-    return pd.DataFrame(meta_list)
+    mark_word_onsets_df = mark_word_onsets(pd.DataFrame(meta_list))
+    return mark_word_onsets_df
 
 class AnnotationsHelper:
     
@@ -116,13 +117,21 @@ def add_voiced_feature(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.
     logger.info(f"Voiced feature added with {df['voiced'].sum()} voiced phonemes")
     return df
 
-def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
+def mark_word_onsets(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    df["is_word_onset"] = False
+    df["is_word"] = False
     words = df.query('kind=="word"')
     if not words.empty:
         word_onset_indices = words.index + 1
-        df.loc[word_onset_indices, "is_word_onset"] = True
+        df.loc[word_onset_indices, "is_word"] = True
+    logger.info(f"Word onset feature added with {df['is_word_onset'].sum()} word onsets")
+    return df
+
+def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    words = df.query('kind=="word"')
+    if not words.empty:
+        word_onset_indices = words.index + 1
         wfreq = lambda x: zipf_frequency(x, "en")
         df.loc[word_onset_indices, "wordfreq"] = words.word.apply(wfreq).values
     logger.info(f"Word frequency feature added with {df['is_word_onset'].sum()} word onsets")

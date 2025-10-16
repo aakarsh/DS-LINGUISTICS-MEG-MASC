@@ -33,14 +33,16 @@ def processed_epochs_for_dummy_subject(dummy_subject_id, config):
     return concatenate_processed_epochs(dummy_subject_id, config, session_range=range(1), task_range=range(1), crop_limit=None, n_jobs=-1)
 
 def test_epochs_are_loaded_correctly(processed_epochs_for_dummy_subject):
+    logger.info("Testing if processed epochs are loaded correctly...")
     assert processed_epochs_for_dummy_subject is not None, "Processed epochs should not be None"
     assert isinstance(processed_epochs_for_dummy_subject, mne.BaseEpochs)
     assert not processed_epochs_for_dummy_subject.metadata.empty
     logger.info(f"Successfully loaded {len(processed_epochs_for_dummy_subject)} epochs for the dummy subject.")
 
 def test_feature_balance_in_real_data(processed_epochs_for_dummy_subject):
+    logger.info("Testing feature balance in real data...")
     metadata = processed_epochs_for_dummy_subject.metadata
-
+    logger.info(f"Metadata columns: {metadata.columns.tolist()}")
     feature_prefixes = ['part_of_speach_', 'VerbForm_', 'Tense_', 'Number_', 'Person_', 'Mood_', 'Definite_', 'PronType_']
     features_to_check = [
         col for col in metadata.columns
@@ -62,6 +64,7 @@ def test_feature_balance_in_real_data(processed_epochs_for_dummy_subject):
 
         if len(counts) < 2 or counts.min() < 5:
             problematic_features.append(f"  - '{feature}': Counts={counts.to_dict()}")
+
         # Log statistics which give likelihood of decoding the feature
         logger.info(
             f"Feature '{feature}': Counts={counts.to_dict()}, "

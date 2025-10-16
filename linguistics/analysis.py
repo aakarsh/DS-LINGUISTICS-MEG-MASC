@@ -132,6 +132,8 @@ def process_bids_file(bids_path: mne_bids.BIDSPath, phonetic_information: pd.Dat
             
         meta_data = parse_annotations(raw)
         logger.info(f"Parsed {len(meta_data)} annotations from raw data.")
+
+
         meta_data = add_voiced_feature(meta_data, phonetic_information)
         meta_data = add_word_frequency_feature(meta_data)
         meta_data = add_linguistic_features(meta_data)
@@ -183,8 +185,8 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         subject_epochs.save(cache_path, overwrite=True)
 
     features_to_decode = {
-        "voiced": subject_epochs["not is_word_onset"],
-        "wordfreq": subject_epochs["is_word_onset"]
+        "voiced": subject_epochs["not is_word"],
+        "wordfreq": subject_epochs["is_word"]
     }
     # This needs to be generated more dynamically
     feature_prefixes = ['part_of_speech_', 'VerbForm_', 'Tense_', 'Number_', 'Person_', 'Mood_', 'Definite_', 'PronType_']
@@ -194,7 +196,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
     ]
 
     for feature_name in morph_feature_names:
-        features_to_decode[feature_name] = subject_epochs["is_word_onset"]
+        features_to_decode[feature_name] = subject_epochs["is_word"]
 
     logging.debug("\n--- Verifying Feature Diversity ---")
     n_splits = 5
