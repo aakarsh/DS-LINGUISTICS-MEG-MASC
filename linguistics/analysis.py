@@ -9,7 +9,7 @@ from sklearn.calibration import cross_val_predict
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, StandardScaler
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.linear_model import LogisticRegression
-
+from sklearn.base import clone
 from sklearn.pipeline import make_pipeline
 import toolz as Z 
 from tqdm import trange
@@ -77,8 +77,8 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     if mean_within_var > 0:
         stats["snr_estimate"] = mean_diff_sq / mean_within_var
 
-    model = make_pipeline(StandardScaler(), LogisticRegression())
-    cv = KFold(n_splits, shuffle=True, random_state=0)
+    model = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto'))
+    cv = StratifiedKFold(n_splits, shuffle=True, random_state=0)
 
     logger.info(f"Statistics for feature '{feature}': {stats}")
 
@@ -105,15 +105,73 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
 
     n_trials, _, n_times = X.shape
     preds = np.zeros((n_trials, n_times))
-
+    '''
     for t in trange(n_times, desc=f"Decoding {feature}"):
         predictions = cross_val_predict(
             model, X[:, :, t], y, cv=cv, method="predict_proba", n_jobs=n_jobs
         )[:, 1]
+        # This always happens not sure why.
         if predictions.ndim == 1:
             logger.warn(f"Warning: predict_proba returned 1D array at timestep {t}. Check class balance.")
             continue
         preds[:, t] = predictions
+    '''
+    # Initialize a predictions array with NaNs to store probabilities for the positive class
+    preds = np.full((n_trials, n_times), np.nan)
+
+    # --- MANUAL CROSS-VALIDATION LOOP ---
+    logger.info("--- Starting Manual Cross-Validation Loop ---")
+    for t in trange(n_times, desc=f"Decoding {feature}"):
+        Xt = X[:, :, t]
+
+
+        # This will store predictions for the current time point across all folds
+        preds_t = np.full(n_trials, np.nan)
+
+        for fold_idx, (train_index, test_index) in enumerate(cv.split(Xt, y)):
+            X_train, X_test = Xt[train_index], Xt[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+
+            stds = np.std(X_train, axis=0)
+            # Check if any of the standard deviations are zero
+            if np.any(stds == 0):
+                logger.warning(
+                    f"  -> FOLD {fold_idx}, TIMESTEP {t}: "
+                    f"Zero variance detected in {np.sum(stds == 0)} out of {len(stds)} channels. "
+                    "StandardScaler will fail."
+                )
+
+
+            train_labels, train_counts = np.unique(y_train, return_counts=True)
+            if len(train_labels) < 2:
+                logger.error(f"  !! FOLD {fold_idx}, TIMESTEP {t}: Only one class in training data! Labels: {train_labels}. Skipping fold.")
+                continue
+
+            try:
+                cloned_model = clone(model)
+                cloned_model.fit(X_train, y_train)
+
+                learned_classes = cloned_model.named_steps['lineardiscriminantanalysis'].classes_
+                if len(learned_classes) < 2:
+                    logger.warning(f"  -> FOLD {fold_idx}, TIMESTEP {t}: Model only learned one class: {learned_classes}.")
+                    probas = cloned_model.predict_proba(X_test) # will be 1D
+                    if learned_classes[0] == 0:
+                        preds_t[test_index] = 0.0 # Prob of class 1 is 0
+                    else:
+                        preds_t[test_index] = 1.0 # Prob of class 1 is 1
+                else:
+                    probas = cloned_model.predict_proba(X_test)[:, 1]
+                    preds_t[test_index] = probas
+
+            except Exception as e:
+                logger.error(f"  !! ERROR in FOLD {fold_idx}, TIMESTEP {t}: {e}", exc_info=True)
+                break
+
+        preds[:, t] = preds_t
+
+    logger.info("--- Manual Cross-Validation Loop Finished ---")
+
+
 
     X_corr, Y_corr = y[:, None], preds
     X_corr, Y_corr = X_corr - X_corr.mean(0), Y_corr - Y_corr.mean(0)
