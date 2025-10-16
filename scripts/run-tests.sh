@@ -19,6 +19,6 @@ echo "Running on: $(hostname)"
 echo "Working directory: $(pwd)"
 echo "-------------------"
 
-uv run pytest -s -vvv
+uv run pytest -s -vvv ./test/integration/test_decoding.py::test_run_decoding_voiced
 
 echo "--- Job Finished ---"

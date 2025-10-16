@@ -19,6 +19,7 @@ from linguistics.reader.data import add_voiced_feature, add_word_frequency_featu
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("linguistics.reader.analysis")
+logger.setLevel(logging.DEBUG)
 
 def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =-1) -> pd.DataFrame:
     stats = {
@@ -77,21 +78,21 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
         stats["snr_estimate"] = mean_diff_sq / mean_within_var
 
     model = make_pipeline(StandardScaler(), LogisticRegression())
-    cv = StratifiedKFold(n_splits, shuffle=True, random_state=0)
+    cv = KFold(n_splits, shuffle=True, random_state=0)
 
     logger.info(f"Statistics for feature '{feature}': {stats}")
 
     # --- START DEBUGGING SNIPPET ---
-    logger.debug(f"--- Debugging Folds for feature: '{feature}' ---")
+    logger.info(f"--- Debugging Folds for feature: '{feature}' ---")
     unique_labels, counts = np.unique(y, return_counts=True)
-    logger.debug(f"Overall class distribution: {dict(zip(unique_labels, counts))}")
+    logger.info(f"Overall class distribution: {dict(zip(unique_labels, counts))}")
 
     cv_debug = cv
     fold_is_problematic = False
     for i, (train_index, _) in enumerate(cv_debug.split(X, y)):
         y_train = y[train_index]
         train_labels, train_counts = np.unique(y_train, return_counts=True)
-        logger.debug(f"  Fold {i} training set distribution: {dict(zip(train_labels, train_counts))}")
+        logger.info(f"  Fold {i} training set distribution: {dict(zip(train_labels, train_counts))}")
         if len(train_labels) < 2:
             logger.error(f"  !! Problem in Fold {i}: Only one class present in training data.")
             fold_is_problematic = True
@@ -99,7 +100,7 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     if fold_is_problematic:
         logger.error("At least one fold is invalid. Stopping before full decoding.")
         return pd.DataFrame() # Stop execution for this feature
-    logger.debug("--- Fold debugging complete. All folds are valid. ---")
+    logger.info("--- Fold debugging complete. All folds are valid. ---")
     # --- END DEBUGGING SNIPPET ---
 
     n_trials, _, n_times = X.shape
@@ -219,7 +220,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
             print(f"  - '{feature}': Counts={counts}")
     logger.debug("-------------------------------------\n")
     features_to_decode = { # get voicing to work again before doing anything else.
-        "voiced": subject_epochs["not is_word_onset"]
+        "voiced": subject_epochs["not is_word"]
     }
 
     all_results = []

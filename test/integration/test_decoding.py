@@ -1,4 +1,4 @@
-from linguistics.analysis import to_bids_path, process_epochs, concatenate_processed_epochs
+from linguistics.analysis import to_bids_path, process_epochs, concatenate_processed_epochs, run_decoding
 from linguistics.reader.data import add_linguistic_features
 from linguistics.reader.data import (
     parse_annotations
@@ -76,3 +76,18 @@ def test_feature_balance_in_real_data(processed_epochs_for_dummy_subject):
     )
     logger.info(f"All {len(features_to_check)} checked features have sufficient samples for decoding.")
 
+
+def test_run_decoding_voiced(processed_epochs_for_dummy_subject):
+    logger.info("Testing decoding for 'voiced' feature...")
+    epochs = processed_epochs_for_dummy_subject
+    feature = 'voiced'
+    epoch_subset = epochs['not is_word']
+    if 'voiced' not in epochs.metadata.columns:
+        pytest.skip("'voiced' feature not found in metadata.")
+    results_df = run_decoding(epoch_subset, feature, n_jobs=-1)
+    # should have scores
+    score_column = results_df['score']
+    assert not score_column.isnull().all(), "Decoding scores should not be all NaN"
+    results_df['contrast'] = feature
+    logger.debug(f"Decoding results for '{feature}':\n{results_df}")
+    assert not results_df.empty, "Decoding results should not be empty"

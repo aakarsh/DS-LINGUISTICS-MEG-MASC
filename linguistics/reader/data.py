@@ -124,7 +124,7 @@ def mark_word_onsets(df: pd.DataFrame) -> pd.DataFrame:
     if not words.empty:
         word_onset_indices = words.index + 1
         df.loc[word_onset_indices, "is_word"] = True
-    logger.info(f"Word onset feature added with {df['is_word_onset'].sum()} word onsets")
+    logger.info(f"Word onset feature added with {df['is_word'].sum()} word onsets")
     return df
 
 def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
@@ -134,7 +134,7 @@ def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
         word_onset_indices = words.index + 1
         wfreq = lambda x: zipf_frequency(x, "en")
         df.loc[word_onset_indices, "wordfreq"] = words.word.apply(wfreq).values
-    logger.info(f"Word frequency feature added with {df['is_word_onset'].sum()} word onsets")
+    logger.info(f"Word frequency feature added with {df['is_word'].sum()} word onsets")
     return df
 
 def create_epochs(data_tuple: tuple) -> mne.Epochs:
