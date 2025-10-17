@@ -20,7 +20,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     config = Config.load_config()
-    results, figs = analyze_subject(args.subject_id, config, n_jobs=args.max_workers, word_feature_prefix_list=args.word_feature_prefix_list)
+    results, figs = analyze_subject(args.subject_id, config, n_jobs=args.max_workers, word_feature_prefixes=args.word_feature_prefix_list)
 
     config.output_dir.mkdir(parents=True, exist_ok=True)
     output_file = config.output_dir / f"{args.subject_id}_decoding_results.csv"

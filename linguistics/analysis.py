@@ -278,7 +278,7 @@ def concatenate_processed_epochs(subject_id: str, config:  Config, session_range
     return epochs
 
 def analyze_subject(subject_id: str, config: Config, n_jobs=-1, word_feature_prefixes=ALL_FEATURE_PREFIXES) -> Tuple[pd.DataFrame, dict]:
-    print(f"\nProcessing subject: {subject_id}")
+    print(f"\nProcessing subject: {subject_id} Number of features to decode: {len(word_feature_prefixes) + 2}")
 
     cache_dir = config.output_dir / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
