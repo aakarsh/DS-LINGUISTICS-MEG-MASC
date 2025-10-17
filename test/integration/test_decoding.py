@@ -91,3 +91,19 @@ def test_run_decoding_voiced(processed_epochs_for_dummy_subject):
     results_df['contrast'] = feature
     logger.debug(f"Decoding results for '{feature}':\n{results_df}")
     assert not results_df.empty, "Decoding results should not be empty"
+
+
+def test_run_decoding_voiced(processed_epochs_for_dummy_subject):
+    logger.info("Testing decoding for 'voiced' feature...")
+    epochs = processed_epochs_for_dummy_subject
+    feature = 'wordfreq'
+    epoch_subset = epochs['is_word']
+    if 'wordfreq' not in epochs.metadata.columns:
+        pytest.skip("'wordfreq' feature not found in metadata.")
+    results_df = run_decoding(epoch_subset, feature, n_jobs=-1)
+    # should have scores
+    score_column = results_df['score']
+    assert not score_column.isnull().all(), "Decoding scores should not be all NaN"
+    results_df['contrast'] = feature
+    logger.debug(f"Decoding results for '{feature}':\n{results_df}")
+    assert not results_df.empty, "Decoding results should not be empty"

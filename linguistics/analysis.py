@@ -32,10 +32,13 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
 
     X_full = epochs.get_data() * 1e13
     y_series = epochs.metadata[feature]
+
     # Add a tiny amount of noise to prevent zero variance issues
     X_full += 1e-12 * np.random.randn(*X_full.shape)
 
     valid_trials = ~y_series.isna()
+    meta_valid = epochs.metadata[valid_trials].copy()
+
     if not np.any(valid_trials):
         logger.warning(f"Warning: No valid (non-NaN) data for feature '{feature}'. Skipping.")
         return pd.DataFrame()
@@ -172,15 +175,42 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     logger.info("--- Manual Cross-Validation Loop Finished ---")
 
 
+    # --- END MANUAL CROSS-VALIDATION LOOP ---
+    # --- SCORING ---
+    out = list()
+    for label, m in meta_valid.groupby("label"):
+        logger.info(f"Scoring label: {label} with {len(m.index)} trials.")
+        group_indices = meta_valid.index.get_indexer_for(m.index)
 
-    X_corr, Y_corr = y[:, None], preds
-    X_corr, Y_corr = X_corr - X_corr.mean(0), Y_corr - Y_corr.mean(0)
+        Rs = correlate(y[group_indices, None], preds[group_indices])
+        for t, r in zip(epochs.times, Rs):
+            out.append(dict(score=r, time=t, label=label, n=len(m.index)))
 
-    with np.errstate(divide='ignore', invalid='ignore'):
-        scores = (X_corr * Y_corr).sum(0) / ((X_corr**2).sum(0)**0.5 * (Y_corr**2).sum(0)**0.5)
+    '''
+        X_corr, Y_corr = y[:, None], preds
+        X_corr, Y_corr = X_corr - X_corr.mean(0), Y_corr - Y_corr.mean(0)
 
-    return pd.DataFrame(dict(score=scores, time=epochs.times))
+        with np.errstate(divide='ignore', invalid='ignore'):
+            scores = (X_corr * Y_corr).sum(0) / ((X_corr**2).sum(0)**0.5 * (Y_corr**2).sum(0)**0.5)
 
+        return pd.DataFrame(dict(score=scores, time=epochs.times))
+    '''
+    return pd.DataFrame(out)
+
+def correlate(X, Y):
+    if X.ndim == 1:
+        X = X[:, None]
+    if Y.ndim == 1:
+        Y = Y[:, None]
+
+    X, Y = X - X.mean(0), Y - Y.mean(0)
+
+    SXY = (X * Y).sum(0)
+
+    SX2 = (X**2).sum(0) ** 0.5
+    SY2 = (Y**2).sum(0) ** 0.5
+
+    return SXY / (SX2 * SY2)
 
 def process_bids_file(bids_path: mne_bids.BIDSPath, phonetic_information: pd.DataFrame, n_jobs=-1, crop_limit=None) -> mne.Epochs | None:
     try:
@@ -216,14 +246,33 @@ def process_epochs(subject_id: str, config: Config, session_range = range(2), ta
         for task_id in task_range:
             bids_path = to_bids_path(subject_id, session_id, task_id, config)
             epochs = process_bids_file(bids_path, config.phonetic_information, n_jobs=n_jobs, crop_limit = crop_limit)
+            epochs.metadata["task"] = task_id
+            epochs.metadata["half"] = np.round(
+                np.linspace(0, 1.0, len(epochs))
+            ).astype(int)
+            epochs.metadata["session"] = session_id
             if epochs:
                 all_epochs.append(epochs)
     return all_epochs
 
+def epoch_labeling(m: pd.DataFrame) -> pd.Series:
+    label = (
+            "t"
+            + m.task.astype(str)
+            + "_s"
+            + m.session.astype(str)
+            + "_h"
+            + m.half.astype(str)
+        )
+    return label
+
 def concatenate_processed_epochs(subject_id: str, config:  Config, session_range = range(2), task_range=range(4), crop_limit=None, n_jobs=-1):
-    all_epochs = process_epochs(subject_id, config, n_jobs=n_jobs)
-    subject_epochs = mne.concatenate_epochs(all_epochs)
-    return subject_epochs
+    logger.info(f"  -> Processing epochs for subject {subject_id}...")
+    all_epochs = process_epochs(subject_id, config, session_range = session_range, task_range=task_range, n_jobs=n_jobs)
+    epochs = mne.concatenate_epochs(all_epochs)
+    epochs.metadata["label"] = epoch_labeling(epochs.metadata)
+    logger.info(f"  -> Concatenated {len(all_epochs)} epoch sets. Total epochs: {len(epochs)}")
+    return epochs
 
 def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.DataFrame, dict]: 
     print(f"\nProcessing subject: {subject_id}")
@@ -236,10 +285,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         logger.info(f"  -> Found cache, loading preprocessed epochs from: {cache_path}")
         subject_epochs = mne.read_epochs(cache_path, preload=True)
     else:
-        all_epochs = process_epochs(subject_id, config, n_jobs=n_jobs)
-        if not all_epochs:
-            return pd.DataFrame(), {}
-        subject_epochs = mne.concatenate_epochs(all_epochs)
+        subject_epochs = concatenate_processed_epochs(subject_id, config, n_jobs=n_jobs)
         logger.info(f"  -> Saving preprocessed epochs to cache: {cache_path}")
         subject_epochs.save(cache_path, overwrite=True)
 
@@ -277,9 +323,6 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         for feature, counts in undecodable_features.items():
             print(f"  - '{feature}': Counts={counts}")
     logger.debug("-------------------------------------\n")
-    features_to_decode = { # get voicing to work again before doing anything else.
-        "voiced": subject_epochs["not is_word"]
-    }
 
     all_results = []
     for feature, epoch_subset in features_to_decode.items():

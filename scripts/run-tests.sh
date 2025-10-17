@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=dev_cpu
 #SBATCH --job-name=pytest-meg-decoder-remaining
+#SBATCH --mem=32G
 #SBATCH --ntasks=64
 #SBATCH --output=slurm_logs/pytest_%A_%a.out
 #SBATCH --error=slurm_logs/pytest_%A_%a.err
