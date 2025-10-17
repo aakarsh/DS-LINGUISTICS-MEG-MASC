@@ -31,6 +31,28 @@ def plot_single_subject_decoding(results_df, subject_id=None, save_path=None):
     
     return fig
 
+def plot_feature_comparison(results_df, feature, save_path=None):
+    sns.set_theme(style="whitegrid")
+    
+    plt.figure(figsize=(10, 6))
+    
+    sns.lineplot(data=results_df, x='time', y='score', hue='contrast', ci='sd', palette='Set2')
+    
+    plt.axhline(0, color='black', linestyle='--', alpha=0.7)
+    plt.title(f'Decoding Performance by {feature.capitalize()}', fontsize=14, fontweight='bold')
+    plt.xlabel('Time (s)', fontsize=12)
+    plt.ylabel('Decoding Score', fontsize=12)
+    plt.legend(title=feature.capitalize(), fontsize=11)
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Figure saved to: {save_path}")
+    
+    return plt.gcf()
+
 def plot_comparison_subjects(results_df, save_path=None):
     sns.set_theme(style="whitegrid")
     
