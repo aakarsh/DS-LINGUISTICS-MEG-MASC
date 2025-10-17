@@ -21,6 +21,9 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("linguistics.reader.analysis")
 logger.setLevel(logging.DEBUG)
 
+ALL_FEATURE_PREFIXES = ['part_of_speech', 'VerbForm', 'Tense', 'Number', 'Person', 'Mood', 'Definite', 'PronType']
+
+
 def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =-1) -> pd.DataFrame:
     stats = {
         "feature": feature,
@@ -274,7 +277,7 @@ def concatenate_processed_epochs(subject_id: str, config:  Config, session_range
     logger.info(f"  -> Concatenated {len(all_epochs)} epoch sets. Total epochs: {len(epochs)}")
     return epochs
 
-def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.DataFrame, dict]: 
+def analyze_subject(subject_id: str, config: Config, n_jobs=-1, word_feature_prefixes=ALL_FEATURE_PREFIXES) -> Tuple[pd.DataFrame, dict]:
     print(f"\nProcessing subject: {subject_id}")
 
     cache_dir = config.output_dir / "cache"
@@ -293,14 +296,12 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1) -> Tuple[pd.Data
         "voiced": subject_epochs["not is_word"],
         "wordfreq": subject_epochs["is_word"]
     }
-    # This needs to be generated more dynamically
-    feature_prefixes = ['part_of_speech_', 'VerbForm_', 'Tense_', 'Number_', 'Person_', 'Mood_', 'Definite_', 'PronType_']
-    morph_feature_names = [
+    word_morph_feature_names = [
         col for col in subject_epochs.metadata.columns
-        if col.startswith(tuple(feature_prefixes))
+        if col.startswith(tuple(word_feature_prefixes))
     ]
 
-    for feature_name in morph_feature_names:
+    for feature_name in word_morph_feature_names:
         features_to_decode[feature_name] = subject_epochs["is_word"]
 
     logging.debug("\n--- Verifying Feature Diversity ---")

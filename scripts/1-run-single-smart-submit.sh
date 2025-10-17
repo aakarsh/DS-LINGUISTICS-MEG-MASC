@@ -4,7 +4,7 @@
 PROJECT_ROOT=/home/tu/tu_tu/tu_zxoxo45/TUE-SUMMER-2025/projects/DS-LINGUISTICS-MEG-MASC
 
 SUBJECT_IDS=(
-    "01" "02" "03" "04" "05" "06" "07" "08" "09" "10" "11"
+    "01" "02" #"03" "04" "05" "06" "07" "08" "09" "10" "11"
 )
 
 # Check which subjects are already processed
@@ -65,8 +65,7 @@ source "\${PROJECT_ROOT}/.env.slurm"
 echo "Starting Slurm job \$SLURM_ARRAY_TASK_ID for subject: \$CURRENT_SUBJECT"
 uv run python -m spacy download en_core_web_sm
 
-uv run python \${PROJECT_ROOT}/scripts/1-run-single-subject.py --subject-id \$CURRENT_SUBJECT --max-workers 128
+uv run python \${PROJECT_ROOT}/scripts/1-run-single-subject.py --subject-id \$CURRENT_SUBJECT --max-workers 128 --word-feature-prefix-list="part_of_speech_, VerbForm_, Tense_"
 EOF
-
 sbatch temp_remaining.sh
 rm temp_remaining.sh

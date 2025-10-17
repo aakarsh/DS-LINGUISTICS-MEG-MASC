@@ -11,12 +11,16 @@ def parse_args():
                       help='Subject ID to analyze (e.g., sub-01)')
     parser.add_argument('--max-workers', type=int, default=-1,
                       help='Maximum number of parallel workers')
+    parser.add_argument('--word-feature-prefix-list', type=str, nargs='*', default=[
+                        'part_of_speach_', 'VerbForm_', 'Tense_', 'Number_', 'Person_', 'Mood_', 'Definite_', 'PronType_'
+                        ],
+                        help='List of prefixes for word features to analyze')
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
     config = Config.load_config()
-    results, figs = analyze_subject(args.subject_id, config, n_jobs=args.max_workers)
+    results, figs = analyze_subject(args.subject_id, config, n_jobs=args.max_workers, word_feature_prefix_list=args.word_feature_prefix_list)
 
     config.output_dir.mkdir(parents=True, exist_ok=True)
     output_file = config.output_dir / f"{args.subject_id}_decoding_results.csv"
