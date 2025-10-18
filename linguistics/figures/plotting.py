@@ -55,33 +55,31 @@ def plot_feature_comparison(results_df, feature, save_path=None):
 
 def plot_comparison_subjects(results_df, save_path=None):
     sns.set_theme(style="whitegrid")
-    
-    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
-    
-    voiced_data = results_df[results_df['contrast'] == 'voiced']
-    sns.lineplot(data=voiced_data, x='time', y='score', hue='subject', ax=axes[0])
-    axes[0].axhline(0, color='k', linestyle='--', alpha=0.7)
-    axes[0].set_title('Phoneme Voicing Decoding')
+    contrasts = results_df['contrast'].unique()
+    # A grid with one row per contrast and one column
+    fig, axes = plt.subplots(len(contrasts), 1, figsize=(15, 5 * len(contrasts)), sharex=False)
+    for ax, contrast in zip(axes, contrasts):
+        sns.lineplot(data=results_df[results_df['contrast'] == contrast], x='time', y='score', hue='subject', ax=ax)
+        ax.axhline(0, color='k', linestyle='--', alpha=0.8)
+        ax.set_title(f'{contrast.capitalize()} Decoding')
     axes[0].set_xlabel('Time (s)')
     axes[0].set_ylabel('Decoding Score')
-    
-    wordfreq_data = results_df[results_df['contrast'] == 'wordfreq']
-    sns.lineplot(data=wordfreq_data, x='time', y='score', hue='subject', ax=axes[1])
-    axes[1].axhline(0, color='k', linestyle='--', alpha=0.7)
-    axes[1].set_title('Word Frequency Decoding')
-    axes[1].set_xlabel('Time (s)')
-    axes[1].set_ylabel('Decoding Score')
-    
     plt.tight_layout()
     
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    
     return fig
 
 def plot_decoding_heatmap(results_df, contrast_type='voiced', save_path=None):
     data = results_df[results_df['contrast'] == contrast_type].copy()
-    heatmap_data = data.pivot(index='subject', columns='time', values='score')
+    
+    # Average the scores for each subject at each time point
+    subject_scores = data.groupby(['subject', 'time'])['score'].mean().reset_index()
+    
+    # Pivot the averaged data
+    heatmap_data = subject_scores.pivot(index='subject', columns='time', values='score')
+    
+    #heatmap_data = data.pivot(index='label', columns='time', values='score')
     
     time_ms = heatmap_data.columns * 1000
     heatmap_data.columns = time_ms

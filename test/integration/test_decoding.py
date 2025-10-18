@@ -111,8 +111,8 @@ def test_run_decoding_wordfreq(processed_epochs_for_dummy_subject):
     logger.debug(f"Decoding results for '{feature}':\n{results_df}")
     assert not results_df.empty, "Decoding results should not be empty"
 
-def test_run_decoding_parts_of_speech(processed_epochs_for_dummy_subject):
-    logger.info("Testing decoding for 'parts_of_speech' feature...")
+def test_run_decoding_parts_of_speach(processed_epochs_for_dummy_subject):
+    logger.info("Testing decoding for 'parts_of_speach' feature...")
     epochs = processed_epochs_for_dummy_subject
     feature = 'part_of_speach_NOUN'
     epoch_subset = epochs['is_word']

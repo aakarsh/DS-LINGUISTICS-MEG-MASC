@@ -117,6 +117,19 @@ def add_voiced_feature(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.
     logger.info(f"Voiced feature added with {df['voiced'].sum()} voiced phonemes")
     return df
 
+def add_phonetic_features(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.DataFrame:
+    logger.info("Adding phonetic features")
+    df = df.copy()
+    phonemes = df.query('kind=="phoneme"')
+    for ph, d in phonemes.groupby("phoneme"):
+        ph_clean = ph.split("_")[0]
+        match = phone_information.query("phoneme==@ph_clean")
+        if len(match) == 1:
+            for feature in ['phonation', 'manner', 'place', 'frontback', 'roundness', 'centrality']: 
+                df.loc[d.index, feature] = match.iloc[0][feature]
+    logger.info(f"Phonetic features added")
+    return df
+
 def mark_word_onsets(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["is_word"] = False

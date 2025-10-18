@@ -15,14 +15,22 @@ import toolz as Z
 from tqdm import trange
 
 from linguistics.env import Config
-from linguistics.reader.data import add_voiced_feature, add_word_frequency_feature, add_linguistic_features, clean_epochs, create_epochs, parse_annotations
+from linguistics.reader.data import add_voiced_feature,add_phonetic_features, add_word_frequency_feature, add_linguistic_features, clean_epochs, create_epochs, parse_annotations
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("linguistics.reader.analysis")
 logger.setLevel(logging.DEBUG)
 
-ALL_FEATURE_PREFIXES = ['part_of_speech', 'VerbForm', 'Tense', 'Number', 'Person', 'Mood', 'Definite', 'PronType']
+all_word_morph_feature_prefixes = ['part_of_speach', 'VerbForm', 'Tense', 'Number', 'Person', 'Mood', 'Definite', 'PronType']
+all_phonetic_feature_prefixes = ['phonation', 'manner', 'place', 'frontback', 'roundness', 'centrality']
 
+ALL_FEATURE_PREFIXES = all_word_morph_feature_prefixes + all_phonetic_feature_prefixes
+
+def is_word_feature_prefix(feature: str) -> bool:
+    return any(feature.startswith(prefix) for prefix in all_word_morph_feature_prefixes)
+
+def is_phonetic_feature_prefix(feature: str) -> bool:
+    return any(feature.startswith(prefix) for prefix in all_phonetic_feature_prefixes)
 
 def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =-1) -> pd.DataFrame:
     stats = {
@@ -227,6 +235,7 @@ def process_bids_file(bids_path: mne_bids.BIDSPath, phonetic_information: pd.Dat
 
 
         meta_data = add_voiced_feature(meta_data, phonetic_information)
+        meta_data = add_phonetic_features(meta_data, phonetic_information)
         meta_data = add_word_frequency_feature(meta_data)
         meta_data = add_linguistic_features(meta_data)
  
@@ -277,8 +286,8 @@ def concatenate_processed_epochs(subject_id: str, config:  Config, session_range
     logger.info(f"  -> Concatenated {len(all_epochs)} epoch sets. Total epochs: {len(epochs)}")
     return epochs
 
-def analyze_subject(subject_id: str, config: Config, n_jobs=-1, word_feature_prefixes=ALL_FEATURE_PREFIXES) -> Tuple[pd.DataFrame, dict]:
-    print(f"\nProcessing subject: {subject_id} Number of features to decode: {len(word_feature_prefixes) + 2}")
+def analyze_subject(subject_id: str, config: Config, n_jobs=-1, feature_prefixes=ALL_FEATURE_PREFIXES) -> Tuple[pd.DataFrame, dict]:
+    print(f"\nProcessing subject: {subject_id} Number of features to decode: {len(feature_prefixes) + 2}")
 
     cache_dir = config.output_dir / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -292,23 +301,18 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1, word_feature_pre
         logger.info(f"  -> Saving preprocessed epochs to cache: {cache_path}")
         subject_epochs.save(cache_path, overwrite=True)
 
-    features_to_decode = {
-        "voiced": subject_epochs["not is_word"],
-        "wordfreq": subject_epochs["is_word"]
-    }
-    word_morph_feature_names = [
-        col for col in subject_epochs.metadata.columns
-        if col.startswith(tuple(word_feature_prefixes))
-    ]
-
-    for feature_name in word_morph_feature_names:
-        features_to_decode[feature_name] = subject_epochs["is_word"]
-
+    features_to_decode = { }
+    
+    for feature in feature_prefixes:
+        if is_word_feature_prefix(feature):
+            features_to_decode[feature] = subject_epochs["is_word"]
+        elif is_phonetic_feature_prefix(feature):
+            features_to_decode[feature] = subject_epochs["not is_word"] 
+            
     logging.debug("\n--- Verifying Feature Diversity ---")
     n_splits = 5
     decodable_features = []
     undecodable_features = {}
-    metadata = subject_epochs.metadata
 
     for feature, epoch_subset in features_to_decode.items():
         if feature in epoch_subset.metadata.columns:
