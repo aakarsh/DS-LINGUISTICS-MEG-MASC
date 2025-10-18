@@ -15,15 +15,22 @@ def parse_args():
                         'part_of_speach_', 'VerbForm_', 'Tense_', 'Number_', 'Person_', 'Mood_', 'Definite_', 'PronType_',
                         'phonation_', 'manner_', 'place_', 'frontback_', 'roundness_', 'centrality_', 'voiced'
                         ],
-                        help='List of prefixes for word features to analyze')
+                        help='List of prefixes for features to analyze')
+    parser.add_argument('--output-file', type=str, default=None,
+                      help='Path to save the output CSV file')
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
     config = Config.load_config()
-    results, figs = analyze_subject(args.subject_id, config, n_jobs=args.max_workers, feature_prefixes=args.word_feature_prefix_list)
+    # If output file is specified and exists, skip analysis
+    if args.output_file and Path(args.output_file).exists():
+        print(f"Output file {args.output_file} already exists. Skipping analysis.")
+    else:
+        results, figs = analyze_subject(args.subject_id, config, n_jobs=args.max_workers, feature_prefixes=args.feature_prefix_list)
 
-    config.output_dir.mkdir(parents=True, exist_ok=True)
-    output_file = config.output_dir / f"{args.subject_id}_decoding_results.csv"
-    
-    results.to_csv(output_file, index=False)
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+
+        output_file = args.output_file if args.output_file else config.output_dir / f"{args.subject_id}_decoding_results.csv"
+
+        results.to_csv(output_file, index=False)

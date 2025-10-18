@@ -303,11 +303,15 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1, feature_prefixes
 
     features_to_decode = { }
     
-    for feature in feature_prefixes:
-        if is_word_feature_prefix(feature):
-            features_to_decode[feature] = subject_epochs["is_word"]
-        elif is_phonetic_feature_prefix(feature):
-            features_to_decode[feature] = subject_epochs["not is_word"] 
+    for feature_prefix in feature_prefixes:
+        if is_word_feature_prefix(feature_prefix):
+            epoch_subset = subject_epochs["is_word"]
+        elif is_phonetic_feature_prefix(feature_prefix):
+            epoch_subset = subject_epochs["not is_word"]
+        matching_columns = [col for col in epoch_subset.metadata.columns if col.startswith(feature_prefix)]
+        
+        for feature in matching_columns:
+            features_to_decode[feature] = epoch_subset
             
     logging.debug("\n--- Verifying Feature Diversity ---")
     n_splits = 5

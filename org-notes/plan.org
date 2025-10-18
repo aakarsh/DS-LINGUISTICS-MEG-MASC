@@ -1,8 +1,8 @@
 * DONE Setup Environment
   - [x] Create virtual environment and install dependencies from `pyproject.toml`.
 * TODO Add and decode other linguistic features
-  - [ ] add part of speech tags - done
-  - [ ] Don't know how to add other aspects of speech.
+  - [ ] add part of speach tags - done
+  - [ ] Don't know how to add other aspects of speach.
   - [ ] add DEP type.
   - [ ] add TAG
   - [ ] verb morphological features

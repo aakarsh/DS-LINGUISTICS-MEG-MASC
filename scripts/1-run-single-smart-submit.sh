@@ -65,7 +65,7 @@ source "\${PROJECT_ROOT}/.env.slurm"
 echo "Starting Slurm job \$SLURM_ARRAY_TASK_ID for subject: \$CURRENT_SUBJECT"
 uv run python -m spacy download en_core_web_sm
 
-uv run python \${PROJECT_ROOT}/scripts/1-run-single-subject.py --subject-id \$CURRENT_SUBJECT --max-workers 128 --word-feature-prefix-list part_of_speach
+uv run python \${PROJECT_ROOT}/scripts/1-run-single-subject.py --subject-id \$CURRENT_SUBJECT --max-workers 128 --feature-prefix-list phonation manner place frontback roundness centrality voiced
 EOF
 sbatch temp_remaining.sh
 rm temp_remaining.sh

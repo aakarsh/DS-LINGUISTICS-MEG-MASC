@@ -42,10 +42,6 @@ class AnnotationsHelper:
     def add_word_frequency_feature(df: pd.DataFrame) -> pd.DataFrame:
         return add_word_frequency_feature(df)
     
-    @staticmethod
-    def add_part_of_speach_feature(df: pd.DataFrame) -> pd.DataFrame:
-        return add_part_of_speach_feature(df)
-
 def add_linguistic_features(df: pd.DataFrame) -> pd.DataFrame:
     logger.info("Adding part-of-speach feature")
     df = df.copy()
@@ -120,14 +116,20 @@ def add_voiced_feature(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.
 def add_phonetic_features(df: pd.DataFrame, phone_information: pd.DataFrame) -> pd.DataFrame:
     logger.info("Adding phonetic features")
     df = df.copy()
+    feature_cols = ['phonation', 'manner', 'place', 'frontback', 'roundness', 'centrality']
     phonemes = df.query('kind=="phoneme"')
     for ph, d in phonemes.groupby("phoneme"):
         ph_clean = ph.split("_")[0]
         match = phone_information.query("phoneme==@ph_clean")
         if len(match) == 1:
-            for feature in ['phonation', 'manner', 'place', 'frontback', 'roundness', 'centrality']: 
+            for feature in feature_cols: 
                 df.loc[d.index, feature] = match.iloc[0][feature]
     logger.info(f"Phonetic features added")
+    for col in feature_cols:
+        df[col] = df[col].fillna('none')
+    logger.info("Applying one-hot encoding to phonetic features...")
+    df = pd.get_dummies(df, columns=feature_cols, prefix=feature_cols)
+    logger.info(f"Encoded features: {feature_cols}") 
     return df
 
 def mark_word_onsets(df: pd.DataFrame) -> pd.DataFrame:
