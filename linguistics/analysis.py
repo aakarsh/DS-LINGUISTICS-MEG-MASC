@@ -308,6 +308,8 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1, feature_prefixes
             epoch_subset = subject_epochs["is_word"]
         elif is_phonetic_feature_prefix(feature_prefix):
             epoch_subset = subject_epochs["not is_word"]
+        else:
+            continue
         matching_columns = [col for col in epoch_subset.metadata.columns if col.startswith(feature_prefix)]
         
         for feature in matching_columns:

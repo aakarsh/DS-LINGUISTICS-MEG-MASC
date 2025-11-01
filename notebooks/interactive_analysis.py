@@ -14,7 +14,21 @@ import pandas as pd
 import linguistics.figures.plotting as plotting
 importlib.reload(plotting)
 #%%
-decoding_roots = Path("../output/18-10-2025-15-33")
+decoding_roots = Path("../output/19-10-2025-18-13")
+# Fixed glob pattern - use * instead of +
+matching_files = list(decoding_roots.glob("[0-9][0-9]_chunk[0-9]*_decoding_results.csv"))
+print(f"Found {len(matching_files)} decoding result files.")
+result_df = pd.DataFrame()
+for file in matching_files:
+    try:
+        df = pd.read_csv(file)
+    except Exception as e:
+        print(f"Error reading {file}: {e}")
+        continue
+    result_df = pd.concat([result_df, df], ignore_index=True)
+print(f"Combined dataframe shape: {result_df.shape}")
+all_subjects_df = result_df
+#%%
 subjects_dfs = []
 for i in range(9, 1, -1):
     if i == 3:
@@ -29,6 +43,7 @@ for i in range(9, 1, -1):
 all_subjects_df = pd.concat(subjects_dfs)
 #%%
 features = all_subjects_df['contrast'].unique()
+features = features[:10]  # Limit to first 10 features for brevity
 for feature_name in features:
     subject_ids = all_subjects_df.subject.unique()
     for selected_subject_id in subject_ids:
@@ -39,7 +54,7 @@ for feature_name in features:
         print(subjects_filtered_by_feature['contrast'].unique())
         plotting.plot_feature_comparison(subjects_filtered_by_feature, feature=feature_name, save_path="../output/feature_comparison_plot.png")
 #%%
-plotting.plot_comparison_subjects(pd.concat(subjects_dfs), save_path="../output/comparison_plot.png")
+plotting.plot_comparison_subjects(all_subjects_df, save_path="../output/comparison_plot.png")
 
 #%%
 all_subjects_df = pd.concat(subjects_dfs)
