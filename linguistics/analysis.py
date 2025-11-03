@@ -95,8 +95,6 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     cv = StratifiedKFold(n_splits, shuffle=True, random_state=0)
 
     logger.info(f"Statistics for feature '{feature}': {stats}")
-
-    # --- START DEBUGGING SNIPPET ---
     logger.info(f"--- Debugging Folds for feature: '{feature}' ---")
     unique_labels, counts = np.unique(y, return_counts=True)
     logger.info(f"Overall class distribution: {dict(zip(unique_labels, counts))}")
@@ -115,7 +113,6 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
         logger.error("At least one fold is invalid. Stopping before full decoding.")
         return pd.DataFrame() # Stop execution for this feature
     logger.info("--- Fold debugging complete. All folds are valid. ---")
-    # --- END DEBUGGING SNIPPET ---
 
     n_trials, _, n_times = X.shape
     preds = np.zeros((n_trials, n_times))
@@ -132,12 +129,9 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     '''
     # Initialize a predictions array with NaNs to store probabilities for the positive class
     preds = np.full((n_trials, n_times), np.nan)
-
-    # --- MANUAL CROSS-VALIDATION LOOP ---
     logger.info("--- Starting Manual Cross-Validation Loop ---")
     for t in trange(n_times, desc=f"Decoding {feature}"):
         Xt = X[:, :, t]
-
 
         # This will store predictions for the current time point across all folds
         preds_t = np.full(n_trials, np.nan)
@@ -154,7 +148,6 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
                     f"Zero variance detected in {np.sum(stds == 0)} out of {len(stds)} channels. "
                     "StandardScaler will fail."
                 )
-
 
             train_labels, train_counts = np.unique(y_train, return_counts=True)
             if len(train_labels) < 2:
@@ -185,9 +178,6 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
 
     logger.info("--- Manual Cross-Validation Loop Finished ---")
 
-
-    # --- END MANUAL CROSS-VALIDATION LOOP ---
-    # --- SCORING ---
     out = list()
     for label, m in meta_valid.groupby("label"):
         logger.info(f"Scoring label: {label} with {len(m.index)} trials.")
@@ -347,7 +337,7 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1, feature_prefixes
 
     final_results = pd.concat(all_results, ignore_index=True)
     debug_path = config.output_dir / f"{subject_id}_metadata_for_debug.csv"
-    print(f"--- DEBUG: Speichere Metadaten zur Überprüfung in {debug_path} ---")
+    print(f"--- DEBUG: {debug_path} ---")
     subject_epochs.metadata.to_csv(debug_path)
     # ------------------------------------
 
