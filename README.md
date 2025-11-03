@@ -4,7 +4,7 @@
 
 This project for data science  linguistics.  
 
-Porivdes reading and analysis of Magnetoencephalography (MEG-MASC) data and annotating it with word and phoneme level features. 
+Provides reading and analysis of Magnetoencephalography (MEG-MASC) data and annotating it with word and phoneme level features. 
 These features are then used to perform the decoding analysis and generate figures and results in notebook/analysis.ipynb file.
 
 The decoding is designed to be run on HPC slurm environment to be tractable. 
