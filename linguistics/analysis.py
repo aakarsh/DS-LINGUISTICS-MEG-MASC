@@ -112,28 +112,14 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
     if fold_is_problematic:
         logger.error("At least one fold is invalid. Stopping before full decoding.")
         return pd.DataFrame() # Stop execution for this feature
-    logger.info("--- Fold debugging complete. All folds are valid. ---")
 
     n_trials, _, n_times = X.shape
     preds = np.zeros((n_trials, n_times))
-    '''
-    for t in trange(n_times, desc=f"Decoding {feature}"):
-        predictions = cross_val_predict(
-            model, X[:, :, t], y, cv=cv, method="predict_proba", n_jobs=n_jobs
-        )[:, 1]
-        # This always happens not sure why.
-        if predictions.ndim == 1:
-            logger.warn(f"Warning: predict_proba returned 1D array at timestep {t}. Check class balance.")
-            continue
-        preds[:, t] = predictions
-    '''
     # Initialize a predictions array with NaNs to store probabilities for the positive class
     preds = np.full((n_trials, n_times), np.nan)
     logger.info("--- Starting Manual Cross-Validation Loop ---")
     for t in trange(n_times, desc=f"Decoding {feature}"):
         Xt = X[:, :, t]
-
-        # This will store predictions for the current time point across all folds
         preds_t = np.full(n_trials, np.nan)
 
         for fold_idx, (train_index, test_index) in enumerate(cv.split(Xt, y)):
@@ -141,7 +127,6 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
             y_train, y_test = y[train_index], y[test_index]
 
             stds = np.std(X_train, axis=0)
-            # Check if any of the standard deviations are zero
             if np.any(stds == 0):
                 logger.warning(
                     f"  -> FOLD {fold_idx}, TIMESTEP {t}: "
@@ -176,7 +161,6 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
 
         preds[:, t] = preds_t
 
-    logger.info("--- Manual Cross-Validation Loop Finished ---")
 
     out = list()
     for label, m in meta_valid.groupby("label"):
@@ -187,15 +171,6 @@ def run_decoding(epochs: mne.Epochs, feature: str,n_splits: int=5, n_jobs: int =
         for t, r in zip(epochs.times, Rs):
             out.append(dict(score=r, time=t, label=label, n=len(m.index)))
 
-    '''
-        X_corr, Y_corr = y[:, None], preds
-        X_corr, Y_corr = X_corr - X_corr.mean(0), Y_corr - Y_corr.mean(0)
-
-        with np.errstate(divide='ignore', invalid='ignore'):
-            scores = (X_corr * Y_corr).sum(0) / ((X_corr**2).sum(0)**0.5 * (Y_corr**2).sum(0)**0.5)
-
-        return pd.DataFrame(dict(score=scores, time=epochs.times))
-    '''
     return pd.DataFrame(out)
 
 def correlate(X, Y):
@@ -339,17 +314,5 @@ def analyze_subject(subject_id: str, config: Config, n_jobs=-1, feature_prefixes
     debug_path = config.output_dir / f"{subject_id}_metadata_for_debug.csv"
     print(f"--- DEBUG: {debug_path} ---")
     subject_epochs.metadata.to_csv(debug_path)
-    # ------------------------------------
 
     return final_results, None
-
-
-def analyze_all_subjects(config: Config) -> pd.DataFrame:
-    all_results = []
-    for subject_id in config.subjects:
-        results, figs = analyze_subject(subject_id, config)
-        all_results.append(results)
-        # for key, fig in figs.items():
-        #     fig.savefig(config.output_dir / f"{subject_id}_{key}_decoding.png")
-        #     plt.close(fig)
-    return pd.concat(all_results, ignore_index=True)
